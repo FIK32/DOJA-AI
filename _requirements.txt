@@ -1,7 +1,0 @@
-fastapi
-uvicorn
-openai
-duckduckgo-search
-bcrypt
-python-multipart
-requests
