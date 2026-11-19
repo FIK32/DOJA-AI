@@ -1,13 +1,14 @@
 import os
 import json
+import random
 import urllib.parse
 import requests
 from openai import OpenAI
 from duckduckgo_search import DDGS
 import database
 
-# Put your real Groq API key here:
-API_KEY = "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"
+# Ensure your real Groq API key is here:
+API_KEY = "PASTE_YOUR_API_KEY_HERE"
 
 client = OpenAI(
     base_url="https://api.groq.com/openai/v1",
@@ -62,11 +63,17 @@ def create_project_file(filename: str, content: str) -> str:
     print(f"\n⚡ [DOJA AI Created: {filepath}]")
     return f"File '{filename}' generated and saved in workspace."
 
+# ==========================================================
+# HIGH-FIDELITY FLUX IMAGE GENERATION ENGINE
+# ==========================================================
 def generate_image(prompt: str) -> str:
-    print(f"\n🎨 [DOJA AI Generating Image: '{prompt}']...")
+    """Generates studio-grade visuals using high-definition Flux models."""
+    print(f"\n🎨 [DOJA AI Studio Rendering Image: '{prompt[:60]}...']...")
     clean_prompt = urllib.parse.quote(prompt.strip())
-    image_url = f"https://image.pollinations.ai/prompt/{clean_prompt}?width=1024&height=600&nologo=true"
-    return f"\n\n![{prompt}]({image_url})\n\n"
+    seed = random.randint(1000, 999999)
+    # Uses Flux with 1280x720 HD resolution, unique seed, and no watermarks
+    image_url = f"https://image.pollinations.ai/prompt/{clean_prompt}?model=flux&width=1280&height=720&seed={seed}&nologo=true"
+    return f"\n\n![{prompt[:40]}]({image_url})\n\n"
 
 available_tools = {
     "search_internet": search_internet,
@@ -89,20 +96,12 @@ tools_definition = [
         "type": "function",
         "function": {
             "name": "platform_search",
-            "description": "Targeted search on github, stackoverflow, mdn, wikipedia, reddit, youtube, etc.",
+            "description": "Targeted search on specific platforms (github, stackoverflow, mdn, wikipedia, reddit, etc.).",
             "parameters": {
                 "type": "object",
                 "properties": {"platform": {"type": "string"}, "query": {"type": "string"}},
                 "required": ["platform", "query"]
             }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "live_github_lookup",
-            "description": "Directly check GitHub repositories for code and star count.",
-            "parameters": {"type": "object", "properties": {"repo_or_user": {"type": "string"}}, "required": ["repo_or_user"]}
         }
     },
     {
@@ -121,27 +120,45 @@ tools_definition = [
         "type": "function",
         "function": {
             "name": "generate_image",
-            "description": "Generate an AI visual illustration, diagram, logo, or poster.",
-            "parameters": {"type": "object", "properties": {"prompt": {"type": "string"}}, "required": ["prompt"]}
+            "description": "Generate high-definition AI images, photographs, diagrams, or visual artwork.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "prompt": {
+                        "type": "string",
+                        "description": "Comprehensive visual prompt including subject, environment, lighting, camera lens, perspective, and color grading."
+                    }
+                },
+                "required": ["prompt"]
+            }
         }
     }
 ]
 
-SYSTEM_PROMPT = """You are DOJA AI — an advanced autonomous intelligence, engineer, educator, and research platform.
+# ==========================================================
+# MASTER SYSTEM PROMPT (8 IMAGE CRITERIA INCLUDED)
+# ==========================================================
+SYSTEM_PROMPT = """You are DOJA AI — an elite autonomous intelligence, developer, researcher, and visual artist.
 
-CORE CAPABILITIES:
-- Coding in all languages (Python, JavaScript, C++, C#, Java, Rust, Go, SQL).
-- 2D and 3D browser games (Three.js/Canvas), interactive calculators, and full websites saved to 'workspace' using 'create_project_file' to preview live.
-- Multi-source research across connected platforms (GitHub, MDN, Stack Overflow, Wikipedia, PyPI, npm).
-- Visual concept art and diagrams using 'generate_image'.
+### 🎨 8-POINT IMAGE GENERATION ARCHITECTURE:
+Whenever the user asks for an image, diagram, illustration, or when a topic benefits from a visual, you MUST call 'generate_image' following these 8 rules:
 
-STRICT TEXT FORMATTING:
-- NO horizontal lines (never use '---' or '===').
-- NO markdown pipe tables (never use '|---|---|').
-- Clean, well-spaced paragraphs with bold titles followed by a colon.
+1. Prompt Understanding: Analyze the core subject, background, lighting, color palette, camera angle, and artistic medium. Enhance brief user requests into descriptive, vivid prompts.
+2. Image Quality: Target photorealism, 8k resolution, razor-sharp textures, natural raytraced shadows, and studio color grading.
+3. Image Styles: Seamlessly produce Photorealistic Photography, Cinematic Film Still, 3D Octane Render, Scientific Biological Diagrams, Architectural Visualizations, or Digital Paintings based on user context.
+4. Photographic Standards: Specify camera perspectives (eye-level, wide-angle, macro), lens properties (e.g. 50mm f/1.8 lens, shallow depth of field), exposure, and volumetric lighting (golden hour, studio rim light).
+5. Composition: Establish a clean focal subject with balanced rule-of-thirds framing, avoiding distorted or cluttered elements.
+6. Diagrams & Education: For biology, agriculture, or science, specify clean botanical/anatomical accuracy with structured visual organization.
+7. Image Refinement: Ensure anatomical and structural accuracy before calling the tool.
+8. Output: ALWAYS return the actual rendered image via the 'generate_image' tool. Never merely write a textual description of what an image should look like.
+
+### 📝 CLEAN TEXT STYLING:
+- NO horizontal divider lines ('---' or '===').
+- NO markdown pipe tables ('|---|---|').
+- Clean, well-spaced paragraphs with a bold heading followed by a colon.
 """
 
-def chat_with_doja(user_prompt: str, user_id: int = 1, history: list = None, model_name: str = "openai/gpt-oss-120b"):
+def chat_with_doja(user_prompt: str, user_id: int = 1, history: list = None, model_name: str = "openai/gpt-oss-120b", image_b64: str = None):
     custom_inst = database.get_user_instructions(user_id)
     system_text = SYSTEM_PROMPT
     if custom_inst:
@@ -149,64 +166,71 @@ def chat_with_doja(user_prompt: str, user_id: int = 1, history: list = None, mod
 
     messages = [{"role": "system", "content": system_text}]
 
-    # Load multi-turn conversation memory (last 6 exchanges)
     if history and isinstance(history, list):
         for msg in history[-6:]:
             messages.append({"role": msg.get("role", "user"), "content": msg.get("content", "")})
 
-    messages.append({"role": "user", "content": user_prompt})
+    if image_b64:
+        model_name = "llama-3.2-11b-vision-preview"
+        user_content = [
+            {"type": "text", "text": user_prompt or "Analyze this image in detail and describe what you see."},
+            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_b64}"}}
+        ]
+        messages.append({"role": "user", "content": user_content})
+    else:
+        messages.append({"role": "user", "content": user_prompt})
 
     last_response = ""
+    generated_images = []
+
     while True:
-        response = client.chat.completions.create(
-            model=model_name or "openai/gpt-oss-120b",
-            messages=messages,
-            tools=tools_definition,
-            tool_choice="auto"
-        )
-        msg = response.choices[0].message
-        messages.append(msg)
-
-       generated_images = []
-    while True:
-        response = client.chat.completions.create(
-            model=model_name or "openai/gpt-oss-120b",
-            messages=messages,
-            tools=tools_definition,
-            tool_choice="auto"
-        )
-        msg = response.choices[0].message
-        messages.append(msg)
-
-        if msg.tool_calls:
-            for tool_call in msg.tool_calls:
-                fn_name = tool_call.function.name
-                fn_args = json.loads(tool_call.function.arguments)
-                tool_func = available_tools[fn_name]
-                result = tool_func(**fn_args)
-
-                # Capture the image tag so it never gets lost!
-                if fn_name == "generate_image":
-                    generated_images.append(result)
-
-                messages.append({
-                    "tool_call_id": tool_call.id,
-                    "role": "tool",
-                    "name": fn_name,
-                    "content": result
-                })
-        else:
-            last_response = msg.content or "Completed."
+        if image_b64:
+            response = client.chat.completions.create(model=model_name, messages=messages)
+            last_response = response.choices[0].message.content or "Image analyzed successfully."
             break
+        else:
+            response = client.chat.completions.create(
+                model=model_name or "openai/gpt-oss-120b",
+                messages=messages,
+                tools=tools_definition,
+                tool_choice="auto"
+            )
+            msg = response.choices[0].message
+            messages.append(msg)
 
-    # Attach the image directly to the final answer!
+            if msg.tool_calls:
+                for tool_call in msg.tool_calls:
+                    fn_name = tool_call.function.name
+                    fn_args = json.loads(tool_call.function.arguments)
+                    tool_func = available_tools[fn_name]
+                    result = tool_func(**fn_args)
+
+                    # Capture rendered image
+                    if fn_name == "generate_image":
+                        generated_images.append(result)
+
+                    messages.append({
+                        "tool_call_id": tool_call.id,
+                        "role": "tool",
+                        "name": fn_name,
+                        "content": result
+                    })
+            else:
+                last_response = msg.content or "Completed."
+                break
+
+    # Guarantee the image is attached to the top of the answer
     if generated_images:
         last_response = "".join(generated_images) + "\n\n" + last_response
 
     try:
         title = user_prompt[:35] + ("..." if len(user_prompt) > 35 else "")
-        database.save_project(user_id, title, user_prompt, last_response)
+        saved_history = (history or []) + [
+            {"role": "user", "content": user_prompt},
+            {"role": "assistant", "content": last_response}
+        ]
+        database.save_project(user_id, title, user_prompt, last_response, saved_history)
     except Exception as e:
-        print(f"Database error: {e}")
+        print(f"Database save error: {e}")
 
     return last_response
