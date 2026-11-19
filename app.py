@@ -63,8 +63,11 @@ class SettingsRequest(BaseModel):
 
 @app.get("/", response_class=HTMLResponse)
 def home():
-    with open("templates/index.html", "r", encoding="utf-8") as f:
-        return f.read()
+    for path in ["templates/index.html", "index.html"]:
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
+                return f.read()
+    return "<h1>DOJA AI: index.html was not found</h1>"
 
 # ----------------- AUTH ROUTES -----------------
 @app.post("/api/signup")
