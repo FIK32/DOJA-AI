@@ -167,12 +167,27 @@ def chat_with_doja(user_prompt: str, user_id: int = 1, history: list = None, mod
         msg = response.choices[0].message
         messages.append(msg)
 
+       generated_images = []
+    while True:
+        response = client.chat.completions.create(
+            model=model_name or "openai/gpt-oss-120b",
+            messages=messages,
+            tools=tools_definition,
+            tool_choice="auto"
+        )
+        msg = response.choices[0].message
+        messages.append(msg)
+
         if msg.tool_calls:
             for tool_call in msg.tool_calls:
                 fn_name = tool_call.function.name
                 fn_args = json.loads(tool_call.function.arguments)
                 tool_func = available_tools[fn_name]
                 result = tool_func(**fn_args)
+
+                # Capture the image tag so it never gets lost!
+                if fn_name == "generate_image":
+                    generated_images.append(result)
 
                 messages.append({
                     "tool_call_id": tool_call.id,
@@ -183,6 +198,10 @@ def chat_with_doja(user_prompt: str, user_id: int = 1, history: list = None, mod
         else:
             last_response = msg.content or "Completed."
             break
+
+    # Attach the image directly to the final answer!
+    if generated_images:
+        last_response = "".join(generated_images) + "\n\n" + last_response
 
     try:
         title = user_prompt[:35] + ("..." if len(user_prompt) > 35 else "")
