@@ -68,14 +68,11 @@ def create_project_file(filename: str, content: str) -> str:
 # HIGH-FIDELITY FLUX IMAGE GENERATION ENGINE
 # ==========================================================
 def generate_image(prompt: str) -> str:
-    """Generates studio-grade visuals using high-definition Flux models."""
     print(f"\n🎨 [DOJA AI Studio Rendering Image: '{prompt[:60]}...']...")
     clean_prompt = urllib.parse.quote(prompt.strip())
     seed = random.randint(1000, 999999)
-    # Uses Flux with 1280x720 HD resolution, unique seed, and no watermarks
-    image_url = f"https://image.pollinations.ai/prompt/{clean_prompt}?model=flux&width=1280&height=720&seed={seed}&nologo=true"
+    image_url = f"https://image.pollinations.ai/prompt/{clean_prompt}?model=turbo&width=1024&height=600&seed={seed}&nologo=true&enhance=true"
     return f"\n\n![{prompt[:40]}]({image_url})\n\n"
-
 available_tools = {
     "search_internet": search_internet,
     "platform_search": platform_search,
