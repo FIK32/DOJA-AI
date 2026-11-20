@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DOJA AI Studio</title>
+  <title>DOJA AI</title>
 
   <!-- Colorful Vibrant DOJA Favicon -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'><defs><linearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' stop-color='%2300f2fe'/><stop offset='35%25' stop-color='%233b82f6'/><stop offset='70%25' stop-color='%23a855f7'/><stop offset='100%25' stop-color='%23f43f5e'/></linearGradient></defs><rect x='8' y='8' width='104' height='104' rx='28' fill='%23090d16' stroke='url(%23g)' stroke-width='4'/><rect x='34' y='32' width='13' height='56' rx='6.5' fill='url(%23g)'/><path d='M42 32 H65 C78 32 88 41 88 54 C88 62 83 69 76 72' stroke='url(%23g)' stroke-width='12' stroke-linecap='round'/><circle cx='60' cy='60' r='6' fill='%2300f2fe'/></svg>">
@@ -15,58 +15,71 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 
   <style>
-    body.theme-midnight { background-color: #0b0f19; color: #f8fafc; --sidebar: #070a12; --card: #111827; }
-    body.theme-cyberpunk { background-color: #0d0614; color: #f5d0fe; --sidebar: #06020a; --card: #1e0b2b; }
-    body.theme-matrix { background-color: #030804; color: #86efac; --sidebar: #010402; --card: #061c0c; }
-    body.theme-minimal { background-color: #121212; color: #e4e4e7; --sidebar: #0a0a0a; --card: #1c1c1f; }
+    /* ================= 5 HIGH-END THEMES ================= */
+    /* 1. Neon AI Universe */
+    body.theme-neon { background-color: #080417; color: #f8fafc; --sidebar: #05020f; --card: #12092b; --accent: #ec4899; --accent-glow: rgba(236,72,153,0.35); --border: #281452; }
+    /* 2. Colorful Gradient */
+    body.theme-gradient { background-color: #0b071e; color: #fdf2f8; --sidebar: #070414; --card: #150f38; --accent: #f97316; --accent-glow: rgba(249,115,22,0.35); --border: #311f6d; }
+    /* 3. Luxury AI Gold */
+    body.theme-luxury { background-color: #0a0a0c; color: #fef08a; --sidebar: #050507; --card: #17161b; --accent: #eab308; --accent-glow: rgba(234,179,8,0.3); --border: #3a3424; }
+    /* 4. Aurora Glass */
+    body.theme-aurora { background-color: #031416; color: #e6fffa; --sidebar: #020d0f; --card: #08282c; --accent: #14b8a6; --accent-glow: rgba(20,184,166,0.35); --border: #134e4a; }
+    /* 5. ChatGPT Minimalist Clean */
+    body.theme-chatgpt { background-color: #212121; color: #ececec; --sidebar: #171717; --card: #2f2f2f; --accent: #10a37f; --accent-glow: rgba(16,163,127,0.3); --border: #3b3b3b; }
 
+    /* Typography & Text Styling */
     .prose-doja p { margin-bottom: 1.25rem; line-height: 1.8; font-size: 0.95rem; }
     .prose-doja strong { color: #fff; font-weight: 700; }
     .prose-doja hr, .prose-doja table { display: none !important; }
-    .prose-doja img { border-radius: 1.25rem; margin: 1.5rem 0; width: 100%; max-height: 480px; object-fit: cover; border: 1px solid #334155; box-shadow: 0 20px 35px -10px rgba(0,0,0,0.7); display: block; }
-    pre { background: #18181b !important; border: 1px solid #27272a; border-radius: 0.75rem; padding: 1rem; position: relative; margin: 1rem 0; }
+    .prose-doja img { border-radius: 1.25rem; margin: 1.5rem 0; width: 100%; max-height: 520px; object-fit: cover; border: 1px solid var(--border); box-shadow: 0 20px 35px -10px rgba(0,0,0,0.7); display: block; }
+    pre { background: #121215 !important; border: 1px solid var(--border); border-radius: 0.85rem; padding: 1.1rem; position: relative; margin: 1.2rem 0; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
   </style>
 </head>
-<body class="theme-midnight h-screen flex flex-col font-sans overflow-hidden transition-colors duration-300">
+<body class="theme-neon h-screen flex flex-col font-sans overflow-hidden transition-colors duration-500">
 
   <!-- ================= AUTH MODAL ================= -->
   <div id="authModal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 hidden">
-    <div class="bg-slate-900 border border-slate-800 p-8 rounded-3xl w-full max-w-md shadow-2xl">
+    <div class="bg-[var(--card)] border border-[var(--border)] p-8 rounded-3xl w-full max-w-md shadow-2xl">
       <div class="flex items-center gap-3 mb-6">
-        <!-- Colorful Logo -->
-        <svg class="w-10 h-10 drop-shadow-[0_0_12px_rgba(168,85,247,0.6)]" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="dojaGradAuth" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00f2fe"/><stop offset="35%" stop-color="#3b82f6"/><stop offset="70%" stop-color="#a855f7"/><stop offset="100%" stop-color="#f43f5e"/></linearGradient></defs><rect x="8" y="8" width="104" height="104" rx="28" fill="#090d16" stroke="url(#dojaGradAuth)" stroke-width="4"/><rect x="34" y="32" width="13" height="56" rx="6.5" fill="url(#dojaGradAuth)"/><path d="M42 32 H65 C78 32 88 41 88 54 C88 62 83 69 76 72" stroke="url(#dojaGradAuth)" stroke-width="12" stroke-linecap="round"/><circle cx="60" cy="60" r="6" fill="#00f2fe"/></svg>
+        <svg class="w-10 h-10 drop-shadow-[0_0_14px_rgba(236,72,153,0.6)]" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="dojaGradAuth" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00f2fe"/><stop offset="35%" stop-color="#3b82f6"/><stop offset="70%" stop-color="#a855f7"/><stop offset="100%" stop-color="#f43f5e"/></linearGradient></defs><rect x="8" y="8" width="104" height="104" rx="28" fill="#090d16" stroke="url(#dojaGradAuth)" stroke-width="4"/><rect x="34" y="32" width="13" height="56" rx="6.5" fill="url(#dojaGradAuth)"/><path d="M42 32 H65 C78 32 88 41 88 54 C88 62 83 69 76 72" stroke="url(#dojaGradAuth)" stroke-width="12" stroke-linecap="round"/><circle cx="60" cy="60" r="6" fill="#00f2fe"/></svg>
         <div>
           <h2 class="text-xl font-bold text-white">DOJA AI</h2>
           <p class="text-xs text-slate-400">Universal Intelligence, Development & Research</p>
         </div>
       </div>
 
-      <div class="flex border-b border-slate-800 mb-6">
-        <button id="tabLogin" onclick="switchAuthTab('login')" class="flex-1 pb-3 text-sm font-semibold text-indigo-400 border-b-2 border-indigo-500">Log In</button>
+      <div class="flex border-b border-[var(--border)] mb-6">
+        <button id="tabLogin" onclick="switchAuthTab('login')" class="flex-1 pb-3 text-sm font-semibold text-[var(--accent)] border-b-2 border-[var(--accent)]">Log In</button>
         <button id="tabSignup" onclick="switchAuthTab('signup')" class="flex-1 pb-3 text-sm font-semibold text-slate-400">Create Account</button>
       </div>
 
       <form id="authForm" class="space-y-4">
         <div>
           <label id="userLabel" class="text-xs font-medium text-slate-400">Username or Gmail</label>
-          <input type="text" id="authUsername" required class="w-full mt-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500">
+          <input type="text" id="authUsername" required class="w-full mt-1 bg-black/40 border border-[var(--border)] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[var(--accent)]">
         </div>
 
         <div id="emailField" class="hidden">
           <label class="text-xs font-medium text-slate-400">Gmail Address</label>
-          <input type="email" id="authEmail" class="w-full mt-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500">
+          <input type="email" id="authEmail" class="w-full mt-1 bg-black/40 border border-[var(--border)] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[var(--accent)]">
         </div>
 
         <div>
           <div class="flex justify-between items-center">
             <label class="text-xs font-medium text-slate-400">Password</label>
-            <button type="button" onclick="openForgotModal()" class="text-xs text-indigo-400 hover:underline">Forgot password?</button>
+            <button type="button" onclick="openForgotModal()" class="text-xs text-[var(--accent)] hover:underline">Forgot password?</button>
           </div>
-          <input type="password" id="authPassword" required class="w-full mt-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500">
+          <input type="password" id="authPassword" required class="w-full mt-1 bg-black/40 border border-[var(--border)] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[var(--accent)]">
         </div>
 
         <p id="authError" class="text-xs text-red-400 hidden"></p>
-        <button type="submit" id="authSubmitBtn" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition shadow-lg shadow-indigo-600/30">
+        <button type="submit" id="authSubmitBtn" class="w-full py-3 bg-[var(--accent)] hover:opacity-95 text-white font-semibold rounded-xl transition shadow-lg" style="box-shadow: 0 10px 25px -5px var(--accent-glow);">
           Sign In
         </button>
       </form>
@@ -75,34 +88,34 @@
 
   <!-- ================= SETTINGS & PROFILE MODAL ================= -->
   <div id="settingsModal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 hidden">
-    <div class="bg-slate-900 border border-slate-800 p-8 rounded-3xl w-full max-w-lg shadow-2xl">
-      <div class="flex border-b border-slate-800 mb-6">
-        <button id="setTabInst" onclick="switchSettingsTab('inst')" class="flex-1 pb-3 text-xs font-bold text-indigo-400 border-b-2 border-indigo-500 uppercase tracking-wider">Instructions</button>
+    <div class="bg-[var(--card)] border border-[var(--border)] p-8 rounded-3xl w-full max-w-lg shadow-2xl">
+      <div class="flex border-b border-[var(--border)] mb-6">
+        <button id="setTabInst" onclick="switchSettingsTab('inst')" class="flex-1 pb-3 text-xs font-bold text-[var(--accent)] border-b-2 border-[var(--accent)] uppercase tracking-wider">Instructions</button>
         <button id="setTabPass" onclick="switchSettingsTab('pass')" class="flex-1 pb-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Security & Password</button>
       </div>
 
       <div id="settingsInstSection">
         <p class="text-xs text-slate-400 mb-3">What should DOJA AI remember about you?</p>
-        <textarea id="customInstructionsInput" rows="5" placeholder="e.g. I am a software engineer building games in Godot. Always be concise, provide code without filler, and address me as Chief." class="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-sm text-white focus:outline-none focus:border-indigo-500"></textarea>
+        <textarea id="customInstructionsInput" rows="5" placeholder="e.g. I am a software engineer building games. Be concise, provide code without filler, and address me as Chief." class="w-full bg-black/40 border border-[var(--border)] rounded-xl p-4 text-sm text-white focus:outline-none focus:border-[var(--accent)]"></textarea>
         <div class="flex gap-2 mt-4">
-          <button onclick="closeSettingsModal()" class="flex-1 py-3 bg-slate-800 text-slate-300 rounded-xl text-xs font-semibold">Cancel</button>
-          <button onclick="saveSettings()" class="flex-1 py-3 bg-indigo-600 text-white rounded-xl text-xs font-semibold shadow-lg shadow-indigo-600/30">Save Preferences</button>
+          <button onclick="closeSettingsModal()" class="flex-1 py-3 bg-black/40 text-slate-300 rounded-xl text-xs font-semibold">Cancel</button>
+          <button onclick="saveSettings()" class="flex-1 py-3 bg-[var(--accent)] text-white rounded-xl text-xs font-semibold shadow-lg">Save Preferences</button>
         </div>
       </div>
 
       <div id="settingsPassSection" class="hidden space-y-3">
         <div>
           <label class="text-xs text-slate-400">Current Password</label>
-          <input type="password" id="oldPasswordInput" class="w-full mt-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white">
+          <input type="password" id="oldPasswordInput" class="w-full mt-1 bg-black/40 border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm text-white">
         </div>
         <div>
           <label class="text-xs text-slate-400">New Password</label>
-          <input type="password" id="newPasswordInput" class="w-full mt-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white">
+          <input type="password" id="newPasswordInput" class="w-full mt-1 bg-black/40 border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm text-white">
         </div>
         <p id="passChangeMsg" class="text-xs hidden"></p>
         <div class="flex gap-2 mt-4">
-          <button onclick="closeSettingsModal()" class="flex-1 py-3 bg-slate-800 text-slate-300 rounded-xl text-xs font-semibold">Cancel</button>
-          <button onclick="submitChangePassword()" class="flex-1 py-3 bg-indigo-600 text-white rounded-xl text-xs font-semibold">Update Password</button>
+          <button onclick="closeSettingsModal()" class="flex-1 py-3 bg-black/40 text-slate-300 rounded-xl text-xs font-semibold">Cancel</button>
+          <button onclick="submitChangePassword()" class="flex-1 py-3 bg-[var(--accent)] text-white rounded-xl text-xs font-semibold">Update Password</button>
         </div>
       </div>
     </div>
@@ -110,158 +123,198 @@
 
   <!-- ================= FORGOT PASSWORD MODAL ================= -->
   <div id="forgotModal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 hidden">
-    <div class="bg-slate-900 border border-slate-800 p-8 rounded-3xl w-full max-w-md shadow-2xl">
+    <div class="bg-[var(--card)] border border-[var(--border)] p-8 rounded-3xl w-full max-w-md shadow-2xl">
       <h3 class="text-lg font-bold text-white mb-2">Reset Password</h3>
       <p class="text-xs text-slate-400 mb-4">Enter your Gmail address to receive a secure reset link.</p>
       <form id="forgotForm" class="space-y-4">
-        <input type="email" id="forgotEmail" required placeholder="your.email@gmail.com" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white">
+        <input type="email" id="forgotEmail" required placeholder="your.email@gmail.com" class="w-full bg-black/40 border border-[var(--border)] rounded-xl px-4 py-3 text-sm text-white">
         <p id="forgotMsg" class="text-xs hidden"></p>
         <div class="flex gap-2">
-          <button type="button" onclick="closeForgotModal()" class="flex-1 py-3 bg-slate-800 text-slate-300 rounded-xl text-xs font-semibold">Cancel</button>
-          <button type="submit" class="flex-1 py-3 bg-indigo-600 text-white rounded-xl text-xs font-semibold">Send Link</button>
+          <button type="button" onclick="closeForgotModal()" class="flex-1 py-3 bg-black/40 text-slate-300 rounded-xl text-xs font-semibold">Cancel</button>
+          <button type="submit" class="flex-1 py-3 bg-[var(--accent)] text-white rounded-xl text-xs font-semibold">Send Link</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- ================= MAIN APP ================= -->
+  <!-- ================= MAIN APP LAYOUT ================= -->
   <div class="flex-1 flex overflow-hidden">
-    <!-- Left Sidebar -->
-    <aside class="w-72 bg-[var(--sidebar)] border-r border-slate-800/60 flex flex-col justify-between">
+
+    <!-- LEFT SIDEBAR: ChatGPT-Style Navigation -->
+    <aside class="w-64 bg-[var(--sidebar)] border-r border-[var(--border)] flex flex-col justify-between transition-all">
       <div>
-        <div class="p-4 border-b border-slate-800/60 flex items-center justify-between">
+        <!-- App Logo & New Chat Button -->
+        <div class="p-3 border-b border-[var(--border)] flex items-center justify-between">
           <div class="flex items-center gap-2.5">
-            <!-- Colorful Logo in Header -->
-            <svg class="w-7 h-7 drop-shadow-[0_0_10px_rgba(168,85,247,0.6)]" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="dojaGradSide" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00f2fe"/><stop offset="35%" stop-color="#3b82f6"/><stop offset="70%" stop-color="#a855f7"/><stop offset="100%" stop-color="#f43f5e"/></linearGradient></defs><rect x="8" y="8" width="104" height="104" rx="28" fill="#090d16" stroke="url(#dojaGradSide)" stroke-width="4"/><rect x="34" y="32" width="13" height="56" rx="6.5" fill="url(#dojaGradSide)"/><path d="M42 32 H65 C78 32 88 41 88 54 C88 62 83 69 76 72" stroke="url(#dojaGradSide)" stroke-width="12" stroke-linecap="round"/><circle cx="60" cy="60" r="6" fill="#00f2fe"/></svg>
+            <svg class="w-7 h-7 drop-shadow-[0_0_10px_rgba(236,72,153,0.6)]" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="dojaGradSide" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00f2fe"/><stop offset="35%" stop-color="#3b82f6"/><stop offset="70%" stop-color="#a855f7"/><stop offset="100%" stop-color="#f43f5e"/></linearGradient></defs><rect x="8" y="8" width="104" height="104" rx="28" fill="#090d16" stroke="url(#dojaGradSide)" stroke-width="4"/><rect x="34" y="32" width="13" height="56" rx="6.5" fill="url(#dojaGradSide)"/><path d="M42 32 H65 C78 32 88 41 88 54 C88 62 83 69 76 72" stroke="url(#dojaGradSide)" stroke-width="12" stroke-linecap="round"/><circle cx="60" cy="60" r="6" fill="#00f2fe"/></svg>
             <span class="font-bold text-sm tracking-wide text-white">DOJA AI</span>
           </div>
-          <button onclick="newChat()" title="New Chat" class="p-2 hover:bg-slate-800/60 rounded-lg text-slate-400 hover:text-white transition">
+          <button onclick="newChat()" title="New Chat" class="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center text-slate-300 hover:text-white transition">
             <i class="fa-solid fa-plus text-xs"></i>
           </button>
         </div>
 
+        <!-- Chat History List -->
         <div class="p-3">
-          <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-3">Saved Projects</span>
+          <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2">Recents</span>
           <div id="projectList" class="mt-2 space-y-1 overflow-y-auto max-h-[50vh] pr-1 text-xs"></div>
         </div>
       </div>
 
-      <div class="p-3 border-t border-slate-800/60 space-y-2">
-        <button onclick="openSettingsModal()" class="w-full flex items-center justify-between px-3 py-2 bg-slate-900/40 rounded-xl border border-slate-800/40 text-xs text-slate-300 hover:bg-slate-800 transition">
-          <span><i class="fa-solid fa-sliders mr-2 text-indigo-400"></i> Settings</span>
-          <i class="fa-solid fa-chevron-right text-[10px] text-slate-500"></i>
+      <!-- Bottom Navigation: Theme Selector & User Profile -->
+      <div class="p-3 border-t border-[var(--border)] space-y-2">
+        <button onclick="openSettingsModal()" class="w-full flex items-center justify-between px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl border border-[var(--border)] text-xs text-slate-300 transition">
+          <span><i class="fa-solid fa-sliders mr-2 text-[var(--accent)]"></i> Settings</span>
+          <i class="fa-solid fa-chevron-right text-[10px] text-slate-400"></i>
         </button>
 
-        <div class="flex items-center justify-between px-3 py-2 bg-slate-900/40 rounded-xl border border-slate-800/40">
-          <span class="text-xs text-slate-400"><i class="fa-solid fa-palette mr-1.5"></i> Theme</span>
+        <!-- 5 THEMES SELECTOR -->
+        <div class="flex items-center justify-between px-3 py-2 bg-white/5 rounded-xl border border-[var(--border)]">
+          <span class="text-xs text-slate-300"><i class="fa-solid fa-palette mr-1.5 text-[var(--accent)]"></i> Theme</span>
           <select id="themeSelect" onchange="changeTheme(this.value)" class="bg-transparent text-xs text-white focus:outline-none cursor-pointer">
-            <option value="midnight" class="bg-slate-900">Midnight Blue</option>
-            <option value="cyberpunk" class="bg-purple-950">Cyberpunk Neon</option>
-            <option value="matrix" class="bg-black text-green-400">Matrix Emerald</option>
-            <option value="minimal" class="bg-zinc-900">Minimal Obsidian</option>
+            <option value="neon" class="bg-slate-900 text-pink-400">🌌 Neon Universe</option>
+            <option value="gradient" class="bg-slate-900 text-orange-400">🎨 Colorful Gradient</option>
+            <option value="luxury" class="bg-black text-yellow-400">👑 Luxury AI Gold</option>
+            <option value="aurora" class="bg-cyan-950 text-teal-300">🌿 Aurora Glass</option>
+            <option value="chatgpt" class="bg-neutral-900 text-emerald-400">⚡ ChatGPT Clean</option>
           </select>
         </div>
 
-        <div class="flex items-center justify-between px-3 py-2 bg-slate-900/40 rounded-xl border border-slate-800/40">
+        <!-- User Profile Pill -->
+        <div class="flex items-center justify-between px-3 py-2 bg-white/5 rounded-xl border border-[var(--border)]">
           <div class="flex items-center gap-2">
             <div class="w-6 h-6 rounded-full bg-gradient-to-tr from-indigo-500 to-pink-500 flex items-center justify-center text-[10px] font-bold text-white" id="userAvatar">U</div>
-            <span id="userNameDisplay" class="text-xs font-medium text-slate-300">User</span>
+            <span id="userNameDisplay" class="text-xs font-medium text-slate-200">User</span>
           </div>
-          <button onclick="logout()" title="Logout" class="text-slate-500 hover:text-red-400 text-xs transition">
+          <button onclick="logout()" title="Logout" class="text-slate-400 hover:text-red-400 text-xs transition">
             <i class="fa-solid fa-arrow-right-from-bracket"></i>
           </button>
         </div>
       </div>
     </aside>
 
-    <!-- Center Chat -->
+    <!-- CENTER CHAT AREA (Minimalist ChatGPT Aesthetic) -->
     <main class="flex-1 flex flex-col bg-transparent relative">
-      <header class="h-14 border-b border-slate-800/60 px-6 flex items-center justify-between">
+      <header class="h-14 border-b border-[var(--border)] px-6 flex items-center justify-between bg-black/10 backdrop-blur-md">
         <div class="flex items-center gap-2">
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <select id="modelSelect" class="bg-slate-800/80 border border-slate-700/60 text-xs text-slate-200 rounded-lg px-2.5 py-1 focus:outline-none cursor-pointer">
+          <select id="modelSelect" class="bg-white/5 border border-[var(--border)] text-xs text-slate-200 rounded-lg px-2.5 py-1 focus:outline-none cursor-pointer">
             <option value="openai/gpt-oss-120b">DOJA 120B (Standard Flagship)</option>
             <option value="llama-3.3-70b-versatile">DOJA Fast (Llama 70B)</option>
           </select>
         </div>
 
         <div class="flex items-center gap-2">
-          <button onclick="shareConversation()" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition border border-slate-700/60 flex items-center gap-1.5">
+          <button onclick="shareConversation()" class="text-xs px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 transition border border-[var(--border)] flex items-center gap-1.5">
             <i class="fa-solid fa-share-nodes"></i> Share
           </button>
-          <button onclick="togglePreview()" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition border border-slate-700/60 flex items-center gap-1.5">
+          <button onclick="togglePreview()" class="text-xs px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 transition border border-[var(--border)] flex items-center gap-1.5">
             <i class="fa-solid fa-display"></i> Workspace
           </button>
         </div>
       </header>
 
+      <!-- Chat History -->
       <div id="chatHistory" class="flex-1 p-6 overflow-y-auto space-y-6 max-w-4xl w-full mx-auto">
-        <div class="bg-[var(--card)] border border-slate-800/60 p-6 rounded-2xl text-sm leading-relaxed shadow-lg">
-          <h3 class="font-bold text-base mb-2 text-white">👋 Welcome to DOJA AI</h3>
-          <p class="text-slate-400">Ask reasoning questions, upload photos or documents for analysis, build 2D/3D games, or click 🎙️ to speak.</p>
+        <!-- Hero Welcome State -->
+        <div id="heroWelcome" class="text-center py-12 space-y-6">
+          <div class="inline-flex p-4 rounded-3xl bg-[var(--card)] border border-[var(--border)] shadow-xl" style="box-shadow: 0 15px 35px -5px var(--accent-glow);">
+            <svg class="w-12 h-12" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="heroGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00f2fe"/><stop offset="35%" stop-color="#3b82f6"/><stop offset="70%" stop-color="#a855f7"/><stop offset="100%" stop-color="#f43f5e"/></linearGradient></defs><rect x="8" y="8" width="104" height="104" rx="28" fill="#090d16" stroke="url(#heroGrad)" stroke-width="4"/><rect x="34" y="32" width="13" height="56" rx="6.5" fill="url(#heroGrad)"/><path d="M42 32 H65 C78 32 88 41 88 54 C88 62 83 69 76 72" stroke="url(#heroGrad)" stroke-width="12" stroke-linecap="round"/><circle cx="60" cy="60" r="6" fill="#00f2fe"/></svg>
+          </div>
+          <h2 class="text-2xl font-bold text-white tracking-tight">What can I help you create?</h2>
+          <p class="text-xs text-slate-400 max-w-md mx-auto">Your intelligent creative workspace for 2D/3D games, visual AI art, code in any language, and multi-source research.</p>
+
+          <!-- Quick Suggestion Action Chips -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl mx-auto pt-2 text-left">
+            <button onclick="fillPrompt('Generate a colorful futuristic visual of a cyber city at night')" class="p-3 bg-[var(--card)] hover:bg-white/10 border border-[var(--border)] rounded-2xl transition">
+              <span class="text-sm">🎨</span>
+              <p class="text-xs font-semibold text-white mt-1">AI Images</p>
+              <p class="text-[10px] text-slate-400">High-definition art</p>
+            </button>
+            <button onclick="fillPrompt('Build a playable 2D Snake game with score and smooth physics in the workspace')" class="p-3 bg-[var(--card)] hover:bg-white/10 border border-[var(--border)] rounded-2xl transition">
+              <span class="text-sm">🎮</span>
+              <p class="text-xs font-semibold text-white mt-1">2D/3D Games</p>
+              <p class="text-[10px] text-slate-400">Playable in browser</p>
+            </button>
+            <button onclick="fillPrompt('Write a clean responsive coffee shop landing page in HTML and CSS in the workspace')" class="p-3 bg-[var(--card)] hover:bg-white/10 border border-[var(--border)] rounded-2xl transition">
+              <span class="text-sm">💻</span>
+              <p class="text-xs font-semibold text-white mt-1">Websites</p>
+              <p class="text-[10px] text-slate-400">Build live web apps</p>
+            </button>
+            <button onclick="fillPrompt('Research the latest breakthroughs in quantum computing and summarize key facts')" class="p-3 bg-[var(--card)] hover:bg-white/10 border border-[var(--border)] rounded-2xl transition">
+              <span class="text-sm">🔍</span>
+              <p class="text-xs font-semibold text-white mt-1">Deep Research</p>
+              <p class="text-[10px] text-slate-400">Multi-source insights</p>
+            </button>
+          </div>
         </div>
       </div>
 
-      <!-- Prompt Bar with Mic & Paperclip -->
-      <div class="p-6 bg-transparent max-w-4xl w-full mx-auto">
-        <div id="fileBadge" class="hidden mb-2 inline-flex items-center gap-2 px-3 py-1 bg-indigo-600/30 border border-indigo-500/40 rounded-lg text-xs text-indigo-300">
-          <i id="fileIcon" class="fa-solid fa-paperclip"></i>
+      <!-- ChatGPT-Style Floating Pill Composer -->
+      <div class="p-4 sm:p-6 bg-gradient-to-t from-black/40 via-transparent to-transparent max-w-4xl w-full mx-auto">
+        <div id="fileBadge" class="hidden mb-2 inline-flex items-center gap-2 px-3 py-1 bg-white/10 border border-[var(--border)] rounded-xl text-xs text-slate-300">
+          <i id="fileIcon" class="fa-solid fa-paperclip text-[var(--accent)]"></i>
           <span id="fileName">file.txt</span>
           <button onclick="removeFile()" class="ml-1 text-slate-400 hover:text-white">&times;</button>
         </div>
 
-        <form id="chatForm" class="relative flex items-center">
+        <form id="chatForm" class="relative flex items-center bg-[var(--card)] border border-[var(--border)] rounded-3xl shadow-2xl p-1.5 focus-within:border-[var(--accent)] transition-all">
           <input type="file" id="fileInput" class="hidden" accept="image/*,.txt,.pdf,.py,.js,.html,.css,.csv,.json" onchange="handleFileSelect(this)">
           
-          <button type="button" onclick="document.getElementById('fileInput').click()" class="absolute left-4 text-slate-400 hover:text-white transition" title="Attach Image or Document">
+          <!-- Attachment Button -->
+          <button type="button" onclick="document.getElementById('fileInput').click()" class="w-10 h-10 rounded-2xl text-slate-400 hover:text-white hover:bg-white/5 flex items-center justify-center transition" title="Attach Image or Document">
             <i class="fa-solid fa-paperclip text-sm"></i>
           </button>
 
+          <!-- Input Field -->
           <input 
             type="text" 
             id="promptInput" 
-            placeholder="Type anything you want..." 
-            class="w-full bg-[var(--card)] border border-slate-800 rounded-2xl pl-12 pr-24 py-4 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition shadow-2xl"
+            placeholder="Ask DOJA AI anything..." 
+            class="flex-1 bg-transparent px-3 py-3 text-sm text-white placeholder-slate-400 focus:outline-none"
             required
           >
 
-          <button type="button" id="micBtn" onclick="toggleSpeech()" class="absolute right-12 w-8 h-8 rounded-xl text-slate-400 hover:text-white flex items-center justify-center transition" title="Speak Prompt">
+          <!-- Voice Mic Button -->
+          <button type="button" id="micBtn" onclick="toggleSpeech()" class="w-10 h-10 rounded-2xl text-slate-400 hover:text-white hover:bg-white/5 flex items-center justify-center transition" title="Voice Input">
             <i class="fa-solid fa-microphone text-sm"></i>
           </button>
 
-          <button type="submit" id="sendBtn" class="absolute right-3.5 w-8 h-8 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center transition shadow-lg shadow-indigo-600/30 text-xs">
-            <i class="fa-solid fa-arrow-up"></i>
+          <!-- Circular Send Arrow Button -->
+          <button type="submit" id="sendBtn" class="w-10 h-10 rounded-2xl bg-[var(--accent)] hover:opacity-95 text-white flex items-center justify-center transition shadow-lg shrink-0" style="box-shadow: 0 4px 15px -2px var(--accent-glow);">
+            <i class="fa-solid fa-arrow-up text-sm"></i>
           </button>
         </form>
+        <p class="text-[10px] text-center text-slate-400 mt-2">DOJA AI can make mistakes. Verify critical facts and code.</p>
       </div>
     </main>
 
-    <!-- Right Workspace Panel -->
-    <section id="previewPanel" class="w-[48%] border-l border-slate-800/60 flex flex-col bg-slate-950 hidden">
-      <div class="h-14 px-4 border-b border-slate-800/60 flex items-center justify-between bg-slate-900/50">
-        <div class="flex items-center gap-1">
-          <button id="tabPreview" onclick="switchRightTab('preview')" class="text-xs px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-medium">🎮 Preview</button>
-          <button id="tabCode" onclick="switchRightTab('code')" class="text-xs px-3 py-1.5 rounded-lg text-slate-400 hover:text-white font-medium">💻 Code</button>
+    <!-- RIGHT WORKSPACE PANEL (Preview + Code Inspector + Download) -->
+    <section id="previewPanel" class="w-[48%] border-l border-[var(--border)] flex flex-col bg-black/60 hidden">
+      <div class="h-14 px-4 border-b border-[var(--border)] flex items-center justify-between bg-black/30 backdrop-blur-md">
+        <div class="flex items-center gap-1.5">
+          <button id="tabPreview" onclick="switchRightTab('preview')" class="text-xs px-3 py-1.5 rounded-xl bg-[var(--accent)] text-white font-medium">🎮 Preview</button>
+          <button id="tabCode" onclick="switchRightTab('code')" class="text-xs px-3 py-1.5 rounded-xl text-slate-400 hover:text-white font-medium">💻 Code</button>
         </div>
 
         <div class="flex items-center gap-2">
-          <a href="/api/download-zip" class="text-xs bg-slate-800 hover:bg-slate-700 text-indigo-300 px-3 py-1.5 rounded-lg border border-slate-700 transition flex items-center gap-1.5">
-            <i class="fa-solid fa-file-zipper"></i> Download .ZIP
+          <a href="/api/download-zip" class="text-xs bg-white/5 hover:bg-white/10 text-slate-200 px-3 py-1.5 rounded-xl border border-[var(--border)] transition flex items-center gap-1.5">
+            <i class="fa-solid fa-file-zipper text-[var(--accent)]"></i> Download .ZIP
           </a>
-          <button onclick="reloadPreview()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-lg border border-slate-700 transition">
+          <button onclick="reloadPreview()" class="text-xs bg-white/5 hover:bg-white/10 text-slate-300 px-2.5 py-1.5 rounded-xl border border-[var(--border)] transition">
             <i class="fa-solid fa-rotate-right"></i>
           </button>
         </div>
       </div>
 
-      <div id="previewContainer" class="flex-1 p-2 bg-slate-950">
-        <iframe id="previewFrame" src="/workspace/index.html" class="w-full h-full rounded-xl bg-white border border-slate-800"></iframe>
+      <div id="previewContainer" class="flex-1 p-2 bg-black/40">
+        <iframe id="previewFrame" src="/workspace/index.html" class="w-full h-full rounded-2xl bg-white border border-[var(--border)]"></iframe>
       </div>
 
-      <div id="codeContainer" class="flex-1 p-4 bg-slate-950 overflow-y-auto hidden">
+      <div id="codeContainer" class="flex-1 p-4 bg-black/40 overflow-y-auto hidden">
         <div class="flex items-center justify-between mb-3">
-          <select id="codeFileSelect" onchange="renderSelectedCode()" class="bg-slate-800 border border-slate-700 text-xs text-white px-3 py-1.5 rounded-lg focus:outline-none"></select>
-          <button onclick="copyCurrentCode()" class="text-xs px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition"><i class="fa-regular fa-copy mr-1"></i> Copy Code</button>
+          <select id="codeFileSelect" onchange="renderSelectedCode()" class="bg-white/5 border border-[var(--border)] text-xs text-white px-3 py-1.5 rounded-xl focus:outline-none"></select>
+          <button onclick="copyCurrentCode()" class="text-xs px-3 py-1.5 bg-[var(--accent)] text-white rounded-xl transition"><i class="fa-regular fa-copy mr-1"></i> Copy Code</button>
         </div>
         <pre><code id="codeViewerBlock" class="language-javascript text-xs"></code></pre>
       </div>
@@ -297,12 +350,12 @@
       const emailField = document.getElementById('emailField');
       const btn = document.getElementById('authSubmitBtn');
       if (mode === 'login') {
-        tabLogin.className = "flex-1 pb-3 text-sm font-semibold text-indigo-400 border-b-2 border-indigo-500";
+        tabLogin.className = "flex-1 pb-3 text-sm font-semibold text-[var(--accent)] border-b-2 border-[var(--accent)]";
         tabSignup.className = "flex-1 pb-3 text-sm font-semibold text-slate-400";
         emailField.classList.add('hidden');
         btn.innerText = "Sign In";
       } else {
-        tabSignup.className = "flex-1 pb-3 text-sm font-semibold text-indigo-400 border-b-2 border-indigo-500";
+        tabSignup.className = "flex-1 pb-3 text-sm font-semibold text-[var(--accent)] border-b-2 border-[var(--accent)]";
         tabLogin.className = "flex-1 pb-3 text-sm font-semibold text-slate-400";
         emailField.classList.remove('hidden');
         btn.innerText = "Create Account";
@@ -350,14 +403,14 @@
       if (data.projects && data.projects.length > 0) {
         data.projects.forEach(p => {
           list.innerHTML += `
-            <div class="flex items-center justify-between p-2 hover:bg-slate-800/50 rounded-xl group transition cursor-pointer">
-              <span onclick="loadSession(${p.id})" class="truncate text-slate-300 text-xs flex-1"><i class="fa-solid fa-cube text-[10px] text-indigo-400 mr-2"></i> ${p.title}</span>
-              <button onclick="event.stopPropagation(); deleteProject(${p.id})" class="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-400 text-xs transition px-1"><i class="fa-regular fa-trash-can"></i></button>
+            <div class="flex items-center justify-between p-2 hover:bg-white/5 rounded-xl group transition cursor-pointer">
+              <span onclick="loadSession(${p.id})" class="truncate text-slate-300 text-xs flex-1"><i class="fa-solid fa-cube text-[10px] text-[var(--accent)] mr-2"></i> ${p.title}</span>
+              <button onclick="event.stopPropagation(); deleteProject(${p.id})" class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-400 text-xs transition px-1"><i class="fa-regular fa-trash-can"></i></button>
             </div>
           `;
         });
       } else {
-        list.innerHTML = `<p class="text-slate-600 px-3">No saved projects yet.</p>`;
+        list.innerHTML = `<p class="text-slate-400 px-3">No saved projects yet.</p>`;
       }
     }
 
@@ -374,7 +427,7 @@
         if (msg.role === 'user') {
           history.innerHTML += `
             <div class="flex justify-end">
-              <div class="bg-indigo-600 text-white px-5 py-3 rounded-2xl rounded-tr-sm text-sm max-w-xl shadow-lg">
+              <div class="bg-[var(--accent)] text-white px-5 py-3 rounded-2xl text-sm max-w-xl shadow-lg">
                 ${msg.content}
               </div>
             </div>
@@ -383,8 +436,8 @@
           const formatted = marked.parse(msg.content);
           history.innerHTML += `
             <div class="flex gap-3">
-              <div class="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center font-bold text-white text-xs shrink-0">D</div>
-              <div class="bg-[var(--card)] border border-slate-800 p-6 rounded-2xl rounded-tl-sm text-sm text-slate-200 leading-relaxed max-w-3xl w-full shadow-xl">
+              <div class="w-8 h-8 rounded-xl bg-[var(--accent)] flex items-center justify-center font-bold text-white text-xs shrink-0">D</div>
+              <div class="bg-[var(--card)] border border-[var(--border)] p-6 rounded-2xl text-sm text-slate-200 leading-relaxed max-w-3xl w-full shadow-xl">
                 <div class="prose-doja">${formatted}</div>
               </div>
             </div>
@@ -427,6 +480,11 @@
       input.focus();
     }
 
+    function fillPrompt(text) {
+      document.getElementById('promptInput').value = text;
+      document.getElementById('promptInput').focus();
+    }
+
     function regenerateLast() {
       if (!lastUserPrompt) return alert('No previous prompt to regenerate.');
       document.getElementById('promptInput').value = lastUserPrompt;
@@ -449,13 +507,13 @@
       const prevCont = document.getElementById('previewContainer');
       const codeCont = document.getElementById('codeContainer');
       if (tab === 'preview') {
-        tabPreview.className = "text-xs px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-medium";
-        tabCode.className = "text-xs px-3 py-1.5 rounded-lg text-slate-400 hover:text-white font-medium";
+        tabPreview.className = "text-xs px-3 py-1.5 rounded-xl bg-[var(--accent)] text-white font-medium";
+        tabCode.className = "text-xs px-3 py-1.5 rounded-xl text-slate-400 hover:text-white font-medium";
         prevCont.classList.remove('hidden');
         codeCont.classList.add('hidden');
       } else {
-        tabCode.className = "text-xs px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-medium";
-        tabPreview.className = "text-xs px-3 py-1.5 rounded-lg text-slate-400 hover:text-white font-medium";
+        tabCode.className = "text-xs px-3 py-1.5 rounded-xl bg-[var(--accent)] text-white font-medium";
+        tabPreview.className = "text-xs px-3 py-1.5 rounded-xl text-slate-400 hover:text-white font-medium";
         codeCont.classList.remove('hidden');
         prevCont.classList.add('hidden');
         fetchWorkspaceCode();
@@ -488,12 +546,12 @@
       alert('Code copied to clipboard!');
     }
 
+    /* THEME SWITCHER */
     function changeTheme(theme) {
-      document.body.className = `theme-${theme} h-screen flex flex-col font-sans overflow-hidden transition-colors duration-300`;
+      document.body.className = `theme-${theme} h-screen flex flex-col font-sans overflow-hidden transition-colors duration-500`;
       localStorage.setItem('doja_theme', theme);
     }
-
-    const savedTheme = localStorage.getItem('doja_theme') || 'midnight';
+    const savedTheme = localStorage.getItem('doja_theme') || 'neon';
     document.getElementById('themeSelect').value = savedTheme;
     changeTheme(savedTheme);
 
@@ -509,9 +567,9 @@
       conversationHistory = [];
       lastUserPrompt = "";
       document.getElementById('chatHistory').innerHTML = `
-        <div class="bg-[var(--card)] border border-slate-800/60 p-6 rounded-2xl text-sm leading-relaxed shadow-lg">
-          <h3 class="font-bold text-base mb-2 text-white">✨ New Conversation</h3>
-          <p class="text-slate-400">Ask DOJA AI to build 2D/3D games, inspect uploaded photos, websites, or clean research.</p>
+        <div class="text-center py-12 space-y-6">
+          <h2 class="text-2xl font-bold text-white tracking-tight">What can I help you create?</h2>
+          <p class="text-xs text-slate-400 max-w-md mx-auto">Ask reasoning questions, build games, generate visual art, or use the 🎙️ mic to speak.</p>
         </div>
       `;
     }
@@ -524,12 +582,12 @@
       const secInst = document.getElementById('settingsInstSection');
       const secPass = document.getElementById('settingsPassSection');
       if (tab === 'inst') {
-        tabInst.className = "flex-1 pb-3 text-xs font-bold text-indigo-400 border-b-2 border-indigo-500 uppercase tracking-wider";
+        tabInst.className = "flex-1 pb-3 text-xs font-bold text-[var(--accent)] border-b-2 border-[var(--accent)] uppercase tracking-wider";
         tabPass.className = "flex-1 pb-3 text-xs font-bold text-slate-400 uppercase tracking-wider";
         secInst.classList.remove('hidden');
         secPass.classList.add('hidden');
       } else {
-        tabPass.className = "flex-1 pb-3 text-xs font-bold text-indigo-400 border-b-2 border-indigo-500 uppercase tracking-wider";
+        tabPass.className = "flex-1 pb-3 text-xs font-bold text-[var(--accent)] border-b-2 border-[var(--accent)] uppercase tracking-wider";
         tabInst.className = "flex-1 pb-3 text-xs font-bold text-slate-400 uppercase tracking-wider";
         secPass.classList.remove('hidden');
         secInst.classList.add('hidden');
@@ -608,13 +666,16 @@
       const prompt = input.value.trim();
       if (!prompt && !selectedFile) return;
 
+      const welcome = document.getElementById('heroWelcome');
+      if (welcome) welcome.remove();
+
       lastUserPrompt = prompt;
       const history = document.getElementById('chatHistory');
-      const fileBadgeHtml = selectedFile ? `<div class="text-xs text-indigo-300 mb-1"><i class="fa-solid fa-paperclip mr-1"></i> Attached: ${selectedFile.name}</div>` : '';
+      const fileBadgeHtml = selectedFile ? `<div class="text-xs text-slate-300 mb-1"><i class="fa-solid fa-paperclip mr-1"></i> Attached: ${selectedFile.name}</div>` : '';
 
       history.innerHTML += `
         <div class="flex justify-end group">
-          <div class="bg-indigo-600 text-white px-5 py-3 rounded-2xl rounded-tr-sm text-sm max-w-xl shadow-lg relative">
+          <div class="bg-[var(--accent)] text-white px-5 py-3 rounded-2xl text-sm max-w-xl shadow-lg relative">
             ${fileBadgeHtml}
             ${prompt}
             <button onclick="editPrompt(\`${encodeURIComponent(prompt)}\`)" class="opacity-0 group-hover:opacity-100 absolute -left-7 top-3 text-slate-400 hover:text-white text-xs transition" title="Edit Prompt">
@@ -629,9 +690,9 @@
       const loadingId = 'load-' + Date.now();
       history.innerHTML += `
         <div id="${loadingId}" class="flex gap-3">
-          <div class="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center font-bold text-white text-xs">D</div>
-          <div class="bg-[var(--card)] border border-slate-800 p-4 rounded-2xl rounded-tl-sm text-sm text-slate-300">
-            <span class="animate-pulse flex items-center gap-2"><i class="fa-solid fa-circle-notch fa-spin text-xs text-indigo-400"></i> Thinking...</span>
+          <div class="w-8 h-8 rounded-xl bg-[var(--accent)] flex items-center justify-center font-bold text-white text-xs">D</div>
+          <div class="bg-[var(--card)] border border-[var(--border)] p-4 rounded-2xl text-sm text-slate-300">
+            <span class="animate-pulse flex items-center gap-2"><i class="fa-solid fa-circle-notch fa-spin text-xs text-[var(--accent)]"></i> Thinking...</span>
           </div>
         </div>
       `;
@@ -666,22 +727,22 @@
         const respId = 'resp-' + Date.now();
         history.innerHTML += `
           <div class="flex gap-3">
-            <div class="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center font-bold text-white text-xs shrink-0">D</div>
-            <div class="bg-[var(--card)] border border-slate-800 p-6 rounded-2xl rounded-tl-sm text-sm text-slate-200 leading-relaxed max-w-3xl w-full shadow-xl">
+            <div class="w-8 h-8 rounded-xl bg-[var(--accent)] flex items-center justify-center font-bold text-white text-xs shrink-0">D</div>
+            <div class="bg-[var(--card)] border border-[var(--border)] p-6 rounded-2xl text-sm text-slate-200 leading-relaxed max-w-3xl w-full shadow-xl">
               <div id="${respId}" class="prose-doja"></div>
-              <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-500">
+              <div class="mt-4 pt-3 border-t border-[var(--border)] flex items-center justify-between text-xs text-slate-400">
                 <div class="flex items-center gap-3">
-                  <button onclick="speakText(conversationHistory[conversationHistory.length-1].content)" class="hover:text-indigo-400 transition flex items-center gap-1" title="Read Aloud">
+                  <button onclick="speakText(conversationHistory[conversationHistory.length-1].content)" class="hover:text-white transition flex items-center gap-1" title="Read Aloud">
                     <i class="fa-solid fa-volume-high"></i> Listen
                   </button>
-                  <button onclick="regenerateLast()" class="hover:text-indigo-400 transition flex items-center gap-1" title="Regenerate Answer">
+                  <button onclick="regenerateLast()" class="hover:text-white transition flex items-center gap-1" title="Regenerate Answer">
                     <i class="fa-solid fa-arrows-rotate"></i> Retry
                   </button>
-                  <button onclick="navigator.clipboard.writeText(conversationHistory[conversationHistory.length-1].content); alert('Copied!');" class="hover:text-indigo-400 transition flex items-center gap-1">
+                  <button onclick="navigator.clipboard.writeText(conversationHistory[conversationHistory.length-1].content); alert('Copied!');" class="hover:text-white transition flex items-center gap-1">
                     <i class="fa-regular fa-copy"></i> Copy
                   </button>
                 </div>
-                <span class="text-[11px] text-slate-500">DOJA Engine</span>
+                <span class="text-[11px] text-slate-400">DOJA Studio</span>
               </div>
             </div>
           </div>
