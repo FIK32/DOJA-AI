@@ -65,21 +65,47 @@ def create_project_file(filename: str, content: str) -> str:
     return f"File '{filename}' generated and saved in workspace."
 
 # ==========================================================
-# HIGH-FIDELITY FLUX IMAGE GENERATION ENGINE
+# UNIVERSAL MULTI-STYLE & MULTI-RATIO IMAGE STUDIO
 # ==========================================================
-def generate_image(prompt: str) -> str:
-    print(f"\n🎨 [DOJA AI Studio Rendering Image: '{prompt[:60]}...']...")
-    clean_prompt = urllib.parse.quote(prompt.strip())
-    seed = random.randint(1000, 999999)
-    image_url = f"https://image.pollinations.ai/prompt/{clean_prompt}?model=turbo&width=1024&height=600&seed={seed}&nologo=true&enhance=true"
-    return f"\n\n![{prompt[:40]}]({image_url})\n\n"
-available_tools = {
-    "search_internet": search_internet,
-    "platform_search": platform_search,
-    "live_github_lookup": live_github_lookup,
-    "create_project_file": create_project_file,
-    "generate_image": generate_image
-}
+def generate_image(prompt: str, style: str = "photorealistic", aspect_ratio: str = "16:9", count: int = 1) -> str:
+    """Generates high-resolution visuals across multiple styles, aspect ratios, and variations."""
+    print(f"\n🎨 [DOJA AI Studio: Generating {count} image(s) | Style: {style} | Ratio: {aspect_ratio}]...")
+    
+    # 1. Determine Dimensions from Aspect Ratio
+    dimensions = {
+        "16:9": (1280, 720),     # Cinema / Landscape / Desktop
+        "1:1": (1024, 1024),     # Square / Instagram / Avatar / Logo
+        "9:16": (720, 1280),     # Portrait / Phone Wallpaper / Poster
+        "4:3": (1024, 768)       # Classic Presentation
+    }
+    width, height = dimensions.get(aspect_ratio.strip(), (1280, 720))
+
+    # 2. Apply Targeted Style Modifiers
+    style_modifiers = {
+        "photorealistic": "photorealistic, raw photo, natural lighting, shot on 50mm f/1.8 lens, 8k resolution, ultra-detailed textures",
+        "cinematic": "cinematic film still, anamorphic lens, dramatic moody lighting, 35mm film grain, Hollywood color grading",
+        "3d": "3D render, Octane render, Unreal Engine 5, raytraced reflections, volumetric lighting, smooth 3D geometry",
+        "anime": "anime aesthetic, Studio Ghibli and Makoto Shinkai style, vibrant colors, clean lineart, digital anime illustration",
+        "painting": "digital concept art, oil painting on textured canvas, dynamic brush strokes, fine art masterpiece",
+        "cyberpunk": "cyberpunk sci-fi, glowing neon cyan and magenta lights, dark obsidian city, rain reflections, volumetric fog",
+        "logo": "minimalist vector logo, flat design, clean geometric lines, professional branding emblem, white background",
+        "diagram": "scientific diagram, clean biological educational illustration, clear anatomical structure, textbook quality"
+    }
+    modifier = style_modifiers.get(style.lower().strip(), style_modifiers["photorealistic"])
+    full_prompt = f"{prompt.strip()}, {modifier}"
+
+    # 3. Generate Image(s) (Supports 1 to 3 variations)
+    num_images = max(1, min(count, 3))
+    markdown_output = []
+
+    for i in range(num_images):
+        seed = random.randint(1000, 999999)
+        clean_url_prompt = urllib.parse.quote(full_prompt)
+        image_url = f"https://image.pollinations.ai/prompt/{clean_url_prompt}?model=turbo&width={width}&height={height}&seed={seed}&nologo=true&enhance=true"
+        caption = f"{prompt[:30]} (Variation {i+1})" if num_images > 1 else prompt[:40]
+        markdown_output.append(f"![{caption}]({image_url})")
+
+    return "\n\n".join(markdown_output) + "\n\n"
 
 tools_definition = [
     {
