@@ -15,7 +15,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 
   <style>
-    /* ================= 5 HIGH-END THEMES ================= */
+    /* 5 High-End Themes */
     body.theme-neon { background-color: #080417; color: #f8fafc; --sidebar: #05020f; --card: #12092b; --accent: #ec4899; --accent-glow: rgba(236,72,153,0.35); --border: #281452; }
     body.theme-gradient { background-color: #0b071e; color: #fdf2f8; --sidebar: #070414; --card: #150f38; --accent: #f97316; --accent-glow: rgba(249,115,22,0.35); --border: #311f6d; }
     body.theme-luxury { background-color: #0a0a0c; color: #fef08a; --sidebar: #050507; --card: #17161b; --accent: #eab308; --accent-glow: rgba(234,179,8,0.3); --border: #3a3424; }
@@ -860,6 +860,9 @@
       document.getElementById('fileBadge').classList.add('hidden');
     }
 
+    // ==========================================================
+    // CHAT SUBMISSION (LIVE COUNTING TIMER + EXPANDABLE THOUGHT BOX)
+    // ==========================================================
     document.getElementById('chatForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const input = document.getElementById('promptInput');
@@ -887,16 +890,31 @@
       input.value = '';
       history.scrollTop = history.scrollHeight;
 
-      const loadingId = 'load-' + Date.now();
+      // 1. START LIVE TIMER & LOADING STATE
+      const startTime = Date.now();
+      const loadingId = 'load-' + startTime;
+      const timerId = 'thinkTimer-' + startTime;
+
       history.innerHTML += `
         <div id="${loadingId}" class="flex gap-4">
           <div class="w-8 h-8 rounded-xl bg-[var(--accent)] flex items-center justify-center font-bold text-white text-xs shrink-0 mt-1">D</div>
           <div class="text-sm text-slate-300 py-1">
-            <span class="animate-pulse flex items-center gap-2"><i class="fa-solid fa-circle-notch fa-spin text-xs text-[var(--accent)]"></i> Thinking...</span>
+            <span class="flex items-center gap-2">
+              <i class="fa-solid fa-circle-notch fa-spin text-xs text-[var(--accent)]"></i>
+              <span class="font-medium text-slate-200">Thinking...</span>
+              <span id="${timerId}" class="text-xs text-slate-400 font-mono">0s</span>
+            </span>
           </div>
         </div>
       `;
       history.scrollTop = history.scrollHeight;
+
+      // Real-time counting ticker
+      const countInterval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        const timerEl = document.getElementById(timerId);
+        if (timerEl) timerEl.innerText = `${elapsed}s`;
+      }, 1000);
 
       try {
         let res, data;
@@ -919,18 +937,40 @@
           });
         }
         data = await res.json();
+        
+        clearInterval(countInterval);
         document.getElementById(loadingId).remove();
 
+        const totalSeconds = Math.max(1, Math.floor((Date.now() - startTime) / 1000));
         conversationHistory.push({ role: "user", content: prompt });
         conversationHistory.push({ role: "assistant", content: data.response });
 
         const respId = 'resp-' + Date.now();
-        // Free-Floating Answer Without Box Borders or Lines
+
+        // 2. RENDER THE EXPANDABLE "THOUGHT FOR X SECONDS" ACCORDION + FREE-FLOATING ANSWER
         history.innerHTML += `
           <div class="flex gap-4">
             <div class="w-8 h-8 rounded-xl bg-[var(--accent)] flex items-center justify-center font-bold text-white text-xs shrink-0 mt-1">D</div>
             <div class="flex-1 max-w-3xl">
+
+              <!-- Expandable Thinking Dropdown -->
+              <details class="mb-3 group rounded-xl bg-white/5 border border-[var(--border)] p-2.5 text-xs transition">
+                <summary class="cursor-pointer text-slate-400 font-medium flex items-center gap-2 select-none hover:text-white transition list-none">
+                  <i class="fa-solid fa-chevron-right text-[10px] text-slate-400 group-open:rotate-90 transition-transform"></i>
+                  <i class="fa-solid fa-brain text-[var(--accent)] text-xs"></i>
+                  <span>Thought for ${totalSeconds} second${totalSeconds === 1 ? '' : 's'}</span>
+                </summary>
+                <div class="mt-2.5 pt-2 border-t border-[var(--border)] text-slate-400 text-[11px] space-y-1 pl-4 leading-relaxed font-mono">
+                  <p>• Interpreted user prompt and context constraints</p>
+                  <p>• Processed multi-turn memory and tool requirements</p>
+                  <p>• Formulated reasoning structure and final output</p>
+                </div>
+              </details>
+
+              <!-- Final Answer (Clean Free-Floating Text) -->
               <div id="${respId}" class="prose-doja text-slate-200 leading-relaxed text-sm"></div>
+
+              <!-- Clean Action Footer -->
               <div class="mt-2 flex items-center gap-3 text-xs text-slate-400">
                 <button onclick="speakText(conversationHistory[conversationHistory.length-1].content)" class="hover:text-white transition flex items-center gap-1.5 py-1 px-2 rounded-lg hover:bg-white/5" title="Read Aloud">
                   <i class="fa-solid fa-volume-high text-[11px]"></i> Listen
@@ -962,6 +1002,7 @@
         }, 12);
 
       } catch (err) {
+        clearInterval(countInterval);
         document.getElementById(loadingId).remove();
         history.innerHTML += `<div class="text-xs text-red-400 p-2">Error communicating with DOJA AI engine.</div>`;
       } finally {
