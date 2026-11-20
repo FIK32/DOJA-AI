@@ -70,7 +70,13 @@ def create_user(username, email, password):
 def authenticate_user(username_or_email, password):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute("SELECT id, username, email, password_hash FROM users WHERE username = ? OR email = ?", (username_or_email, username_or_email))
+    identifier = username_or_email.strip().lower()
+    # Case-insensitive query matches regardless of uppercase or lowercase letters
+    cursor.execute("""
+        SELECT id, username, email, password_hash 
+        FROM users 
+        WHERE LOWER(username) = ? OR LOWER(email) = ?
+    """, (identifier, identifier))
     row = cursor.fetchone()
     conn.close()
     if not row:
@@ -79,7 +85,6 @@ def authenticate_user(username_or_email, password):
     if bcrypt.checkpw(password.encode("utf-8"), hashed.encode("utf-8")):
         return {"success": True, "user_id": user_id, "username": username, "email": email}
     return {"success": False, "error": "Incorrect password."}
-
 def create_password_reset_token(email):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
