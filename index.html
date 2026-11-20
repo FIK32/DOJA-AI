@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DOJA AI</title>
 
-  <!-- Colorful Vibrant DOJA Favicon -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'><defs><linearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' stop-color='%2300f2fe'/><stop offset='35%25' stop-color='%233b82f6'/><stop offset='70%25' stop-color='%23a855f7'/><stop offset='100%25' stop-color='%23f43f5e'/></linearGradient></defs><rect x='8' y='8' width='104' height='104' rx='28' fill='%23090d16' stroke='url(%23g)' stroke-width='4'/><rect x='34' y='32' width='13' height='56' rx='6.5' fill='url(%23g)'/><path d='M42 32 H65 C78 32 88 41 88 54 C88 62 83 69 76 72' stroke='url(%23g)' stroke-width='12' stroke-linecap='round'/><circle cx='60' cy='60' r='6' fill='%2300f2fe'/></svg>">
 
   <script src="https://cdn.tailwindcss.com"></script>
@@ -15,30 +14,22 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 
   <style>
-    /* ================= 5 HIGH-END THEMES ================= */
-    /* 1. Neon AI Universe */
     body.theme-neon { background-color: #080417; color: #f8fafc; --sidebar: #05020f; --card: #12092b; --accent: #ec4899; --accent-glow: rgba(236,72,153,0.35); --border: #281452; }
-    /* 2. Colorful Gradient */
     body.theme-gradient { background-color: #0b071e; color: #fdf2f8; --sidebar: #070414; --card: #150f38; --accent: #f97316; --accent-glow: rgba(249,115,22,0.35); --border: #311f6d; }
-    /* 3. Luxury AI Gold */
     body.theme-luxury { background-color: #0a0a0c; color: #fef08a; --sidebar: #050507; --card: #17161b; --accent: #eab308; --accent-glow: rgba(234,179,8,0.3); --border: #3a3424; }
-    /* 4. Aurora Glass */
     body.theme-aurora { background-color: #031416; color: #e6fffa; --sidebar: #020d0f; --card: #08282c; --accent: #14b8a6; --accent-glow: rgba(20,184,166,0.35); --border: #134e4a; }
-    /* 5. ChatGPT Minimalist Clean */
     body.theme-chatgpt { background-color: #212121; color: #ececec; --sidebar: #171717; --card: #2f2f2f; --accent: #10a37f; --accent-glow: rgba(16,163,127,0.3); --border: #3b3b3b; }
 
-    /* Typography & Text Styling */
-    .prose-doja p { margin-bottom: 1.25rem; line-height: 1.8; font-size: 0.95rem; }
+    /* Free-Floating Clean Typography */
+    .prose-doja p { margin-bottom: 1.25rem; line-height: 1.85; font-size: 0.95rem; }
     .prose-doja strong { color: #fff; font-weight: 700; }
     .prose-doja hr, .prose-doja table { display: none !important; }
     .prose-doja img { border-radius: 1.25rem; margin: 1.5rem 0; width: 100%; max-height: 520px; object-fit: cover; border: 1px solid var(--border); box-shadow: 0 20px 35px -10px rgba(0,0,0,0.7); display: block; }
     pre { background: #121215 !important; border: 1px solid var(--border); border-radius: 0.85rem; padding: 1.1rem; position: relative; margin: 1.2rem 0; }
 
-    /* Scrollbar */
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
   </style>
 </head>
 <body class="theme-neon h-screen flex flex-col font-sans overflow-hidden transition-colors duration-500">
@@ -140,10 +131,9 @@
   <!-- ================= MAIN APP LAYOUT ================= -->
   <div class="flex-1 flex overflow-hidden">
 
-    <!-- LEFT SIDEBAR: ChatGPT-Style Navigation -->
+    <!-- LEFT SIDEBAR -->
     <aside class="w-64 bg-[var(--sidebar)] border-r border-[var(--border)] flex flex-col justify-between transition-all">
       <div>
-        <!-- App Logo & New Chat Button -->
         <div class="p-3 border-b border-[var(--border)] flex items-center justify-between">
           <div class="flex items-center gap-2.5">
             <svg class="w-7 h-7 drop-shadow-[0_0_10px_rgba(236,72,153,0.6)]" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="dojaGradSide" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00f2fe"/><stop offset="35%" stop-color="#3b82f6"/><stop offset="70%" stop-color="#a855f7"/><stop offset="100%" stop-color="#f43f5e"/></linearGradient></defs><rect x="8" y="8" width="104" height="104" rx="28" fill="#090d16" stroke="url(#dojaGradSide)" stroke-width="4"/><rect x="34" y="32" width="13" height="56" rx="6.5" fill="url(#dojaGradSide)"/><path d="M42 32 H65 C78 32 88 41 88 54 C88 62 83 69 76 72" stroke="url(#dojaGradSide)" stroke-width="12" stroke-linecap="round"/><circle cx="60" cy="60" r="6" fill="#00f2fe"/></svg>
@@ -154,21 +144,18 @@
           </button>
         </div>
 
-        <!-- Chat History List -->
         <div class="p-3">
           <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2">Recents</span>
           <div id="projectList" class="mt-2 space-y-1 overflow-y-auto max-h-[50vh] pr-1 text-xs"></div>
         </div>
       </div>
 
-      <!-- Bottom Navigation: Theme Selector & User Profile -->
       <div class="p-3 border-t border-[var(--border)] space-y-2">
         <button onclick="openSettingsModal()" class="w-full flex items-center justify-between px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl border border-[var(--border)] text-xs text-slate-300 transition">
           <span><i class="fa-solid fa-sliders mr-2 text-[var(--accent)]"></i> Settings</span>
           <i class="fa-solid fa-chevron-right text-[10px] text-slate-400"></i>
         </button>
 
-        <!-- 5 THEMES SELECTOR -->
         <div class="flex items-center justify-between px-3 py-2 bg-white/5 rounded-xl border border-[var(--border)]">
           <span class="text-xs text-slate-300"><i class="fa-solid fa-palette mr-1.5 text-[var(--accent)]"></i> Theme</span>
           <select id="themeSelect" onchange="changeTheme(this.value)" class="bg-transparent text-xs text-white focus:outline-none cursor-pointer">
@@ -180,7 +167,6 @@
           </select>
         </div>
 
-        <!-- User Profile Pill -->
         <div class="flex items-center justify-between px-3 py-2 bg-white/5 rounded-xl border border-[var(--border)]">
           <div class="flex items-center gap-2">
             <div class="w-6 h-6 rounded-full bg-gradient-to-tr from-indigo-500 to-pink-500 flex items-center justify-center text-[10px] font-bold text-white" id="userAvatar">U</div>
@@ -193,7 +179,7 @@
       </div>
     </aside>
 
-    <!-- CENTER CHAT AREA (Minimalist ChatGPT Aesthetic) -->
+    <!-- CENTER CHAT AREA -->
     <main class="flex-1 flex flex-col bg-transparent relative">
       <header class="h-14 border-b border-[var(--border)] px-6 flex items-center justify-between bg-black/10 backdrop-blur-md">
         <div class="flex items-center gap-2">
@@ -216,7 +202,6 @@
 
       <!-- Chat History -->
       <div id="chatHistory" class="flex-1 p-6 overflow-y-auto space-y-6 max-w-4xl w-full mx-auto">
-        <!-- Hero Welcome State -->
         <div id="heroWelcome" class="text-center py-12 space-y-6">
           <div class="inline-flex p-4 rounded-3xl bg-[var(--card)] border border-[var(--border)] shadow-xl" style="box-shadow: 0 15px 35px -5px var(--accent-glow);">
             <svg class="w-12 h-12" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="heroGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00f2fe"/><stop offset="35%" stop-color="#3b82f6"/><stop offset="70%" stop-color="#a855f7"/><stop offset="100%" stop-color="#f43f5e"/></linearGradient></defs><rect x="8" y="8" width="104" height="104" rx="28" fill="#090d16" stroke="url(#heroGrad)" stroke-width="4"/><rect x="34" y="32" width="13" height="56" rx="6.5" fill="url(#heroGrad)"/><path d="M42 32 H65 C78 32 88 41 88 54 C88 62 83 69 76 72" stroke="url(#heroGrad)" stroke-width="12" stroke-linecap="round"/><circle cx="60" cy="60" r="6" fill="#00f2fe"/></svg>
@@ -224,7 +209,6 @@
           <h2 class="text-2xl font-bold text-white tracking-tight">What can I help you create?</h2>
           <p class="text-xs text-slate-400 max-w-md mx-auto">Your intelligent creative workspace for 2D/3D games, visual AI art, code in any language, and multi-source research.</p>
 
-          <!-- Quick Suggestion Action Chips -->
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl mx-auto pt-2 text-left">
             <button onclick="fillPrompt('Generate a colorful futuristic visual of a cyber city at night')" class="p-3 bg-[var(--card)] hover:bg-white/10 border border-[var(--border)] rounded-2xl transition">
               <span class="text-sm">🎨</span>
@@ -250,7 +234,7 @@
         </div>
       </div>
 
-      <!-- ChatGPT-Style Floating Pill Composer -->
+      <!-- Floating Pill Composer -->
       <div class="p-4 sm:p-6 bg-gradient-to-t from-black/40 via-transparent to-transparent max-w-4xl w-full mx-auto">
         <div id="fileBadge" class="hidden mb-2 inline-flex items-center gap-2 px-3 py-1 bg-white/10 border border-[var(--border)] rounded-xl text-xs text-slate-300">
           <i id="fileIcon" class="fa-solid fa-paperclip text-[var(--accent)]"></i>
@@ -261,12 +245,10 @@
         <form id="chatForm" class="relative flex items-center bg-[var(--card)] border border-[var(--border)] rounded-3xl shadow-2xl p-1.5 focus-within:border-[var(--accent)] transition-all">
           <input type="file" id="fileInput" class="hidden" accept="image/*,.txt,.pdf,.py,.js,.html,.css,.csv,.json" onchange="handleFileSelect(this)">
           
-          <!-- Attachment Button -->
           <button type="button" onclick="document.getElementById('fileInput').click()" class="w-10 h-10 rounded-2xl text-slate-400 hover:text-white hover:bg-white/5 flex items-center justify-center transition" title="Attach Image or Document">
             <i class="fa-solid fa-paperclip text-sm"></i>
           </button>
 
-          <!-- Input Field -->
           <input 
             type="text" 
             id="promptInput" 
@@ -275,12 +257,10 @@
             required
           >
 
-          <!-- Voice Mic Button -->
           <button type="button" id="micBtn" onclick="toggleSpeech()" class="w-10 h-10 rounded-2xl text-slate-400 hover:text-white hover:bg-white/5 flex items-center justify-center transition" title="Voice Input">
             <i class="fa-solid fa-microphone text-sm"></i>
           </button>
 
-          <!-- Circular Send Arrow Button -->
           <button type="submit" id="sendBtn" class="w-10 h-10 rounded-2xl bg-[var(--accent)] hover:opacity-95 text-white flex items-center justify-center transition shadow-lg shrink-0" style="box-shadow: 0 4px 15px -2px var(--accent-glow);">
             <i class="fa-solid fa-arrow-up text-sm"></i>
           </button>
@@ -289,7 +269,7 @@
       </div>
     </main>
 
-    <!-- RIGHT WORKSPACE PANEL (Preview + Code Inspector + Download) -->
+    <!-- RIGHT WORKSPACE PANEL -->
     <section id="previewPanel" class="w-[48%] border-l border-[var(--border)] flex flex-col bg-black/60 hidden">
       <div class="h-14 px-4 border-b border-[var(--border)] flex items-center justify-between bg-black/30 backdrop-blur-md">
         <div class="flex items-center gap-1.5">
@@ -371,12 +351,33 @@
       err.classList.add('hidden');
       const endpoint = authMode === 'login' ? '/api/login' : '/api/signup';
       const payload = authMode === 'login' ? { username_or_email: u, password: p } : { username: u, email: email, password: p };
+
       try {
-        const res = await fetch(endpoint, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
-        const data = await res.json();
+        let res = await fetch(endpoint, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+        let data = await res.json();
+
+        // Resilient Vault Recovery: If server slept/rebuilt and lost temporary SQLite state, auto-restore account seamlessly
+        if (!data.success && authMode === 'login') {
+          const vault = JSON.parse(localStorage.getItem('doja_vault') || '{}');
+          if (vault.username && (vault.username.toLowerCase() === u.toLowerCase() || vault.email.toLowerCase() === u.toLowerCase()) && vault.password === p) {
+            const autoReg = await fetch('/api/signup', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({ username: vault.username, email: vault.email, password: vault.password })
+            });
+            const regData = await autoReg.json();
+            if (regData.success) {
+              data = regData;
+            }
+          }
+        }
+
         if (data.success) {
           currentUser = data;
           localStorage.setItem('doja_user', JSON.stringify(data));
+          if (authMode === 'signup') {
+            localStorage.setItem('doja_vault', JSON.stringify({ username: u, email: email, password: p }));
+          }
           initAuth();
         } else {
           err.innerText = data.error || 'Authentication failed';
@@ -434,11 +435,20 @@
           `;
         } else {
           const formatted = marked.parse(msg.content);
+          // Free-Floating Response (No boxes, no borders)
           history.innerHTML += `
-            <div class="flex gap-3">
-              <div class="w-8 h-8 rounded-xl bg-[var(--accent)] flex items-center justify-center font-bold text-white text-xs shrink-0">D</div>
-              <div class="bg-[var(--card)] border border-[var(--border)] p-6 rounded-2xl text-sm text-slate-200 leading-relaxed max-w-3xl w-full shadow-xl">
-                <div class="prose-doja">${formatted}</div>
+            <div class="flex gap-4">
+              <div class="w-8 h-8 rounded-xl bg-[var(--accent)] flex items-center justify-center font-bold text-white text-xs shrink-0 mt-1">D</div>
+              <div class="flex-1 max-w-3xl">
+                <div class="prose-doja text-slate-200 leading-relaxed text-sm">${formatted}</div>
+                <div class="mt-2 flex items-center gap-3 text-xs text-slate-400">
+                  <button onclick="speakText(\`${encodeURIComponent(msg.content)}\`)" class="hover:text-white transition flex items-center gap-1.5 py-1 px-2 rounded-lg hover:bg-white/5">
+                    <i class="fa-solid fa-volume-high text-[11px]"></i> Listen
+                  </button>
+                  <button onclick="navigator.clipboard.writeText(\`${encodeURIComponent(msg.content)}\`); alert('Copied!');" class="hover:text-white transition flex items-center gap-1.5 py-1 px-2 rounded-lg hover:bg-white/5">
+                    <i class="fa-regular fa-copy text-[11px]"></i> Copy
+                  </button>
+                </div>
               </div>
             </div>
           `;
@@ -469,14 +479,15 @@
 
     function speakText(text) {
       window.speechSynthesis.cancel();
-      const clean = text.replace(/<[^>]*>?/gm, '').replace(/!\[.*?\]\(.*?\)/g, '');
+      const decoded = decodeURIComponent(text);
+      const clean = decoded.replace(/<[^>]*>?/gm, '').replace(/!\[.*?\]\(.*?\)/g, '');
       const utterance = new SpeechSynthesisUtterance(clean);
       window.speechSynthesis.speak(utterance);
     }
 
     function editPrompt(text) {
       const input = document.getElementById('promptInput');
-      input.value = text;
+      input.value = decodeURIComponent(text);
       input.focus();
     }
 
@@ -546,7 +557,6 @@
       alert('Code copied to clipboard!');
     }
 
-    /* THEME SWITCHER */
     function changeTheme(theme) {
       document.body.className = `theme-${theme} h-screen flex flex-col font-sans overflow-hidden transition-colors duration-500`;
       localStorage.setItem('doja_theme', theme);
@@ -689,9 +699,9 @@
 
       const loadingId = 'load-' + Date.now();
       history.innerHTML += `
-        <div id="${loadingId}" class="flex gap-3">
-          <div class="w-8 h-8 rounded-xl bg-[var(--accent)] flex items-center justify-center font-bold text-white text-xs">D</div>
-          <div class="bg-[var(--card)] border border-[var(--border)] p-4 rounded-2xl text-sm text-slate-300">
+        <div id="${loadingId}" class="flex gap-4">
+          <div class="w-8 h-8 rounded-xl bg-[var(--accent)] flex items-center justify-center font-bold text-white text-xs shrink-0 mt-1">D</div>
+          <div class="text-sm text-slate-300 py-1">
             <span class="animate-pulse flex items-center gap-2"><i class="fa-solid fa-circle-notch fa-spin text-xs text-[var(--accent)]"></i> Thinking...</span>
           </div>
         </div>
@@ -725,24 +735,22 @@
         conversationHistory.push({ role: "assistant", content: data.response });
 
         const respId = 'resp-' + Date.now();
+        // Free-Floating Answer Without Box Borders or Lines
         history.innerHTML += `
-          <div class="flex gap-3">
-            <div class="w-8 h-8 rounded-xl bg-[var(--accent)] flex items-center justify-center font-bold text-white text-xs shrink-0">D</div>
-            <div class="bg-[var(--card)] border border-[var(--border)] p-6 rounded-2xl text-sm text-slate-200 leading-relaxed max-w-3xl w-full shadow-xl">
-              <div id="${respId}" class="prose-doja"></div>
-              <div class="mt-4 pt-3 border-t border-[var(--border)] flex items-center justify-between text-xs text-slate-400">
-                <div class="flex items-center gap-3">
-                  <button onclick="speakText(conversationHistory[conversationHistory.length-1].content)" class="hover:text-white transition flex items-center gap-1" title="Read Aloud">
-                    <i class="fa-solid fa-volume-high"></i> Listen
-                  </button>
-                  <button onclick="regenerateLast()" class="hover:text-white transition flex items-center gap-1" title="Regenerate Answer">
-                    <i class="fa-solid fa-arrows-rotate"></i> Retry
-                  </button>
-                  <button onclick="navigator.clipboard.writeText(conversationHistory[conversationHistory.length-1].content); alert('Copied!');" class="hover:text-white transition flex items-center gap-1">
-                    <i class="fa-regular fa-copy"></i> Copy
-                  </button>
-                </div>
-                <span class="text-[11px] text-slate-400">DOJA Studio</span>
+          <div class="flex gap-4">
+            <div class="w-8 h-8 rounded-xl bg-[var(--accent)] flex items-center justify-center font-bold text-white text-xs shrink-0 mt-1">D</div>
+            <div class="flex-1 max-w-3xl">
+              <div id="${respId}" class="prose-doja text-slate-200 leading-relaxed text-sm"></div>
+              <div class="mt-2 flex items-center gap-3 text-xs text-slate-400">
+                <button onclick="speakText(conversationHistory[conversationHistory.length-1].content)" class="hover:text-white transition flex items-center gap-1.5 py-1 px-2 rounded-lg hover:bg-white/5" title="Read Aloud">
+                  <i class="fa-solid fa-volume-high text-[11px]"></i> Listen
+                </button>
+                <button onclick="regenerateLast()" class="hover:text-white transition flex items-center gap-1.5 py-1 px-2 rounded-lg hover:bg-white/5" title="Regenerate Answer">
+                  <i class="fa-solid fa-arrows-rotate text-[11px]"></i> Retry
+                </button>
+                <button onclick="navigator.clipboard.writeText(conversationHistory[conversationHistory.length-1].content); alert('Copied!');" class="hover:text-white transition flex items-center gap-1.5 py-1 px-2 rounded-lg hover:bg-white/5">
+                  <i class="fa-regular fa-copy text-[11px]"></i> Copy
+                </button>
               </div>
             </div>
           </div>
@@ -765,7 +773,7 @@
 
       } catch (err) {
         document.getElementById(loadingId).remove();
-        history.innerHTML += `<div class="text-xs text-red-400 p-3 bg-red-500/10 rounded-xl">Error communicating with DOJA AI engine.</div>`;
+        history.innerHTML += `<div class="text-xs text-red-400 p-2">Error communicating with DOJA AI engine.</div>`;
       } finally {
         history.scrollTop = history.scrollHeight;
       }
