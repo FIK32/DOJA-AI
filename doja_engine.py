@@ -8,7 +8,7 @@ from duckduckgo_search import DDGS
 import database
 
 # Ensure your real Groq API key is on line 11:
-API_KEY = "PASTE_YOUR_API_KEY_HERE"
+API_KEY = "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"
 
 client = OpenAI(
     base_url="https://api.groq.com/openai/v1",
