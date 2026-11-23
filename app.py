@@ -160,7 +160,17 @@ def get_workspace_code():
 def user_projects(user_id: int):
     projects = database.get_user_projects(user_id)
     return {"projects": projects}
+@app.get("/api/projects/{project_id}/load")
+def load_user_project(project_id: int, user_id: int):
+    messages = database.get_project(project_id, user_id)
 
+    if messages is None:
+        return JSONResponse(
+            status_code=404,
+            content={"success": False, "error": "Project not found."},
+        )
+
+    return {"messages": messages}
 @app.delete("/api/projects/{project_id}")
 def delete_user_project(project_id: int, user_id: int):
     database.delete_project(project_id, user_id)
