@@ -6,6 +6,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 import bcrypt
 import psycopg
 from psycopg import IntegrityError
+from psycopg.types.json import Jsonb
 
 
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
@@ -54,16 +55,25 @@ def init_db():
                     prompt TEXT NOT NULL,
                     code_content TEXT,
                     language TEXT DEFAULT 'html',
+                    messages JSONB NOT NULL DEFAULT '[]'::jsonb,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+                    FOREIGN KEY (user_id)
+                        REFERENCES users (id) ON DELETE CASCADE
                 )
+            """)
+
+            cursor.execute("""
+                ALTER TABLE projects
+                ADD COLUMN IF NOT EXISTS messages
+                JSONB NOT NULL DEFAULT '[]'::jsonb
             """)
 
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS user_settings (
                     user_id INTEGER PRIMARY KEY,
                     custom_instructions TEXT DEFAULT '',
-                    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+                    FOREIGN KEY (user_id)
+                        REFERENCES users (id) ON DELETE CASCADE
                 )
             """)
 
@@ -71,8 +81,10 @@ def init_db():
 
 
 def create_user(username, email, password):
-    salt = bcrypt.gensalt()
-    hashed = bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")
+    hashed = bcrypt.hashpw(
+        password.encode("utf-8"),
+        bcrypt.gensalt()
+    ).decode("utf-8")
 
     try:
         with connect_db() as conn:
@@ -121,11 +133,17 @@ def authenticate_user(username_or_email, password):
             row = cursor.fetchone()
 
     if not row:
-        return {"success": False, "error": "User account not found."}
+        return {
+            "success": False,
+            "error": "User account not found.",
+        }
 
     user_id, username, email, hashed = row
 
-    if bcrypt.checkpw(password.encode("utf-8"), hashed.encode("utf-8")):
+    if bcrypt.checkpw(
+        password.encode("utf-8"),
+        hashed.encode("utf-8")
+    ):
         return {
             "success": True,
             "user_id": user_id,
@@ -133,7 +151,10 @@ def authenticate_user(username_or_email, password):
             "email": email,
         }
 
-    return {"success": False, "error": "Incorrect password."}
+    return {
+        "success": False,
+        "error": "Incorrect password.",
+    }
 
 
 def create_password_reset_token(email):
@@ -191,10 +212,9 @@ def reset_password_with_token(token, new_password):
                     "error": "Reset link has expired.",
                 }
 
-            salt = bcrypt.gensalt()
             hashed = bcrypt.hashpw(
                 new_password.encode("utf-8"),
-                salt,
+                bcrypt.gensalt()
             ).decode("utf-8")
 
             cursor.execute(
@@ -215,16 +235,44 @@ def reset_password_with_token(token, new_password):
     }
 
 
-def save_project(user_id, title, prompt, code_content, language="html"):
+def save_project(
+    user_id,
+    title,
+    prompt,
+    code_content,
+    messages=None,
+    language="html",
+):
+    if not isinstance(messages, list):
+        messages = []
+
     with connect_db() as conn:
         with conn.cursor() as cursor:
             cursor.execute("""
-                INSERT INTO projects
-                    (user_id, title, prompt, code_content, language)
-                VALUES (%s, %s, %s, %s, %s)
-            """, (user_id, title, prompt, code_content, language))
+                INSERT INTO projects (
+                    user_id,
+                    title,
+                    prompt,
+                    code_content,
+                    language,
+                    messages
+                )
+                VALUES (%s, %s, %s, %s, %s, %s)
+                RETURNING id
+            """, (
+                user_id,
+                title,
+                prompt,
+                code_content,
+                language,
+                Jsonb(messages),
+            ))
+
+            project_id = cursor.fetchone()[0]
 
         conn.commit()
+
+    return project_id
 
 
 def get_user_projects(user_id):
@@ -250,6 +298,40 @@ def get_user_projects(user_id):
     ]
 
 
+def get_project(project_id, user_id):
+    with connect_db() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT messages, prompt, code_content
+                FROM projects
+                WHERE id = %s AND user_id = %s
+            """, (project_id, user_id))
+
+            row = cursor.fetchone()
+
+    if not row:
+        return None
+
+    messages, prompt, code_content = row
+
+    if not messages:
+        messages = []
+
+        if prompt:
+            messages.append({
+                "role": "user",
+                "content": prompt,
+            })
+
+        if code_content:
+            messages.append({
+                "role": "assistant",
+                "content": code_content,
+            })
+
+    return messages
+
+
 def delete_project(project_id, user_id):
     with connect_db() as conn:
         with conn.cursor() as cursor:
@@ -265,10 +347,14 @@ def save_user_instructions(user_id, instructions):
     with connect_db() as conn:
         with conn.cursor() as cursor:
             cursor.execute("""
-                INSERT INTO user_settings (user_id, custom_instructions)
+                INSERT INTO user_settings (
+                    user_id,
+                    custom_instructions
+                )
                 VALUES (%s, %s)
                 ON CONFLICT (user_id)
-                DO UPDATE SET custom_instructions = EXCLUDED.custom_instructions
+                DO UPDATE SET
+                    custom_instructions = EXCLUDED.custom_instructions
             """, (user_id, instructions))
 
         conn.commit()
