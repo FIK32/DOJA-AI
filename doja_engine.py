@@ -227,9 +227,16 @@ TEXT STYLE RULES:
 - Clean, well-spaced paragraphs with bold titles followed by a colon.
 """
 
-def chat_with_doja(user_prompt: str, user_id: int = 1, history: list = None, model_name: str = "openai/gpt-oss-120b", image_b64: str = None):
+def chat_with_doja(
+    user_prompt: str,
+    user_id: int = 1,
+    history: list = None,
+    model_name: str = "openai/gpt-oss-120b",
+    image_b64: str = None,
+):
     custom_inst = database.get_user_instructions(user_id)
     system_text = SYSTEM_PROMPT
+
     if custom_inst:
         system_text += f"\n\nUSER CUSTOM INSTRUCTIONS:\n{custom_inst}"
 
@@ -237,13 +244,22 @@ def chat_with_doja(user_prompt: str, user_id: int = 1, history: list = None, mod
 
     if history and isinstance(history, list):
         for msg in history[-6:]:
-            messages.append({"role": msg.get("role", "user"), "content": msg.get("content", "")})
+            messages.append({
+                "role": msg.get("role", "user"),
+                "content": msg.get("content", ""),
+            })
 
     if image_b64:
         model_name = "llama-3.2-11b-vision-preview"
         user_content = [
-            {"type": "text", "text": user_prompt or "Analyze this image in detail and describe what you see."},
-            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_b64}"}}
+            {
+                "type": "text",
+                "text": user_prompt or "Analyze this image in detail and describe what you see.",
+            },
+            {
+                "type": "image_url",
+                "image_url": {"url": f"data:image/jpeg;base64,{image_b64}"},
+            },
         ]
         messages.append({"role": "user", "content": user_content})
     else:
@@ -254,39 +270,69 @@ def chat_with_doja(user_prompt: str, user_id: int = 1, history: list = None, mod
 
     while True:
         if image_b64:
-            response = client.chat.completions.create(model=model_name, messages=messages)
-            last_response = response.choices[0].message.content or "Image analyzed successfully."
-            break
-        else:
             response = client.chat.completions.create(
-                model=model_name or "openai/gpt-oss-120b",
+                model=model_name,
                 messages=messages,
-                tools=tools_definition,
-                tool_choice="auto"
             )
-            msg = response.choices[0].message
-            messages.append(msg)
+            last_response = (
+                response.choices[0].message.content
+                or "Image analyzed successfully."
+            )
+            break
 
-            if msg.tool_calls:
-                for tool_call in msg.tool_calls:
-                    fn_name = tool_call.function.name
-                    fn_args = json.loads(tool_call.function.arguments)
-                    tool_func = available_tools[fn_name]
-                    result = tool_func(**fn_args)
+        response = client.chat.completions.create(
+            model=model_name or "openai/gpt-oss-120b",
+            messages=messages,
+            tools=tools_definition,
+            tool_choice="auto",
+        )
 
-                    # Capture rendered diagrams or found real photos!
-                    if fn_name in ["generate_ai_image", "find_real_images"]:
-                        visual_attachments.append(result)
+        msg = response.choices[0].message
+        messages.append(msg)
 
-                    messages.append({
-                        "tool_call_id": tool_call.id,
-                        "role": "tool",
-                        "name": fn_name,
-                        "content": result
-                    })
-            else:
-                last_response = msg.content or "Completed."
-                break
+        if not msg.tool_calls:
+            last_response = msg.content or "Completed."
+            break
+
+        for tool_call in msg.tool_calls:
+            fn_name = tool_call.function.name
+            fn_args = json.loads(tool_call.function.arguments)
+            tool_func = available_tools[fn_name]
+            result = tool_func(**fn_args)
+
+            if fn_name in ["generate_ai_image", "find_real_images"]:
+                visual_attachments.append(result)
+
+            messages.append({
+                "tool_call_id": tool_call.id,
+                "role": "tool",
+                "name": fn_name,
+                "content": result,
+            })
+
+    if visual_attachments:
+        last_response = "\n\n".join(visual_attachments) + "\n\n" + last_response
+
+    # Store this question and answer as a project with its conversation history.
+    try:
+        title = user_prompt[:35] + ("..." if len(user_prompt) > 35 else "")
+        saved_history = (history or []) + [
+            {"role": "user", "content": user_prompt},
+            {"role": "assistant", "content": last_response},
+        ]
+
+        database.save_project(
+            user_id,
+            title,
+            user_prompt,
+            last_response,
+            messages=saved_history,
+        )
+    except Exception as error:
+        # Keep the error visible in Render logs if the database save fails.
+        print(f"Database save error for user {user_id}: {error}")
+
+    return last_response
 
     # Attach any found photos or diagrams directly at the top of the answer
     if visual_attachments:
