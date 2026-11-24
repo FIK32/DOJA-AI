@@ -2,7 +2,5 @@ fastapi
 uvicorn
 openai
 duckduckgo-search
-bcrypt
 python-multipart
 requests
-psycopg[binary]>=3.1,<4
