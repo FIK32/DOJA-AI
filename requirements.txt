@@ -1,6 +1,10 @@
 fastapi
-uvicorn
+uvicorn[standard]
+appwrite
 openai
-duckduckgo-search
+python-dotenv
+bcrypt
 python-multipart
 requests
+duckduckgo-search
+pypdf
