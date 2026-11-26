@@ -1,307 +1,301 @@
-import os, secrets, hashlib, bcrypt, io, re
-from datetime import datetime, timezone, timedelta
+import io
+import os
+import zipfile
 from pathlib import Path
-from typing import Optional
-from dotenv import load_dotenv
-from fastapi import FastAPI, Request, UploadFile, File, Form, HTTPException
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
-import database as store
+from pydantic import BaseModel, Field
+import database
 import doja_engine
 
-load_dotenv()
-BASE = Path(__file__).resolve().parent
-STATIC = BASE / "static"
-STATIC.mkdir(exist_ok=True)
 app = FastAPI(title="DOJA AI Studio")
-app.mount("/static", StaticFiles(directory=str(STATIC)), name="static")
-SESSION_COOKIE = "doja_session"
-COOKIE_SECURE = os.getenv("COOKIE_SECURE", "true").lower() == "true"
+os.makedirs("workspace", exist_ok=True)
+app.mount("/workspace", StaticFiles(directory="workspace", html=True), name="workspace")
+APPWRITE_RECOVERY_URL = os.getenv("APPWRITE_RECOVERY_URL", "").strip()
 
-class ChatPayload(BaseModel):
-    prompt: str = ""
-    history: list = []
-    conversation_id: Optional[str] = None
-    model: Optional[str] = None
 
-class ProjectPayload(BaseModel):
-    title: str
-    content: str = ""
-    project_id: Optional[str] = None
+class SignupRequest(BaseModel):
+    username: str = Field(min_length=1, max_length=100)
+    email: str
+    password: str = Field(min_length=8, max_length=256)
 
-class SettingsPayload(BaseModel):
-    theme: Optional[str] = "neon"
-    model: Optional[str] = None
 
-class SearchPayload(BaseModel):
-    query: str
+class LoginRequest(BaseModel):
+    username_or_email: str
+    password: str
 
-class ImagePayload(BaseModel):
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = ""
+    user_id: str = ""
+    secret: str = ""
+    new_password: str = Field(min_length=8, max_length=256)
+
+
+class ChangePasswordRequest(BaseModel):
+    user_id: str = ""
+    old_password: str
+    new_password: str = Field(min_length=8, max_length=256)
+
+
+class ChatRequest(BaseModel):
     prompt: str
-    style: str = "realistic"
-    ratio: str = "1:1"
+    user_id: str = ""
+    history: list = Field(default_factory=list)
+    model: str = "openai/gpt-oss-120b"
 
 
-def hash_token(token):
-    return hashlib.sha256(token.encode()).hexdigest()
+class SettingsRequest(BaseModel):
+    user_id: str = ""
+    custom_instructions: str = ""
 
-def safe_error(exc):
-    text = str(exc)
-    # Avoid leaking API key values even if provider exception contains a request dump.
-    for secret in (os.getenv("APPWRITE_API_KEY", ""), os.getenv("GROQ_API_KEY", "")):
-        if secret:
-            text = text.replace(secret, "[hidden]")
-    return text[:700]
+
+def set_session(response: JSONResponse, secret: str, request: Request):
+    response.set_cookie("doja_session", secret, httponly=True, secure=request.url.scheme == "https", samesite="lax", max_age=2592000, path="/")
+
+
+def clear_session(response: JSONResponse):
+    response.delete_cookie("doja_session", path="/")
+
 
 def current_user(request: Request):
-    token = request.cookies.get(SESSION_COOKIE)
-    if not token:
-        return None
-    try:
-        session = store.find_one("sessions", "token_hash", hash_token(token))
-        if not session:
-            return None
-        if session.get("expires_at"):
-            expires = datetime.fromisoformat(session["expires_at"].replace("Z", "+00:00"))
-            if expires < datetime.now(timezone.utc):
-                try: store.delete("sessions", session["$id"])
-                except Exception: pass
-                return None
-        return store.get("users", session["user_id"])
-    except Exception:
-        return None
-
-def require_user(request: Request):
-    user = current_user(request)
+    user = database.get_account_from_session(request.cookies.get("doja_session", ""))
     if not user:
-        raise HTTPException(status_code=401, detail="Please log in to continue.")
+        raise HTTPException(status_code=401, detail="Please sign in again.")
     return user
 
-def user_docs(collection, user_id, limit=100):
-    # Owner filtering is done in Python to avoid requiring an index for every query.
-    docs = store.list_docs(collection, limit=100)
-    return [d for d in docs if d.get("user_id") == user_id][:limit]
 
-def conversation_owned(conversation_id, user_id):
-    if not conversation_id:
-        return None
-    try:
-        conv = store.get("conversations", conversation_id)
-        return conv if conv.get("user_id") == user_id else None
-    except Exception:
-        return None
-
-def make_conversation(user_id, title="New chat"):
-    return store.create("conversations", {"user_id": user_id, "title": (title or "New chat")[:120], "created_at": store.now_iso(), "updated_at": store.now_iso()})
-
-def title_from_prompt(prompt):
-    text = re.sub(r"\s+", " ", (prompt or "")).strip()
-    return (text[:58] + "…") if len(text) > 58 else (text or "File analysis")
-
-def save_message(user_id, conversation_id, role, content):
-    return store.create("messages", {"user_id": user_id, "conversation_id": conversation_id, "role": role, "content": content[:45000], "created_at": store.now_iso()})
-
-def generate_for_chat(user, prompt, history, conversation_id, model, file_context="", force_search=False):
-    uid = user["$id"]
-    conv = conversation_owned(conversation_id, uid) if conversation_id else None
-    if not conv:
-        conv = make_conversation(uid, title_from_prompt(prompt))
-    if prompt.strip():
-        save_message(uid, conv["$id"], "user", prompt)
-    try:
-        answer = doja_engine.chat_with_doja(prompt, history=history, model_name=model, file_context=file_context, force_search=force_search)
-    except Exception as e:
-        # The user message remains saved; return a useful error instead of silently failing.
-        raise HTTPException(status_code=502, detail=safe_error(e))
-    save_message(uid, conv["$id"], "assistant", answer)
-    try:
-        store.update("conversations", conv["$id"], {"updated_at": store.now_iso(), "title": conv.get("title") or title_from_prompt(prompt)})
-    except Exception: pass
-    return {"response": answer, "conversation_id": conv["$id"]}
+def owned_user(request: Request, requested_id=""):
+    user = current_user(request)
+    if requested_id and str(requested_id) != user["$id"]:
+        raise HTTPException(status_code=403, detail="You do not own this resource.")
+    return user
 
 
 @app.get("/", response_class=HTMLResponse)
 def home():
-    path = STATIC / "index.html"
-    if not path.exists():
-        raise HTTPException(404, "Frontend index.html is missing")
-    return path.read_text(encoding="utf-8")
+    path = Path("index.html")
+    if not path.is_file():
+        return "<h1>DOJA AI: index.html was not found</h1>"
+    html = path.read_text(encoding="utf-8")
+    bridge = r"""
+<script id="doja-appwrite-bridge">
+(function () {
+  localStorage.removeItem('doja_vault');
+
+  window.logout = async function () {
+    try { await fetch('/api/logout', { method:'POST', credentials:'same-origin' }); } catch (_) {}
+    localStorage.removeItem('doja_user');
+    localStorage.removeItem('doja_vault');
+    currentUser = null;
+    location.reload();
+  };
+
+  window.submitChangePassword = async function () {
+    if (!currentUser) return alert('Please sign in first.');
+    const oldPassword = document.getElementById('oldPasswordInput').value;
+    const newPassword = document.getElementById('newPasswordInput').value;
+    const message = document.getElementById('passChangeMsg');
+    try {
+      const response = await fetch('/api/change-password', {
+        method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({user_id:currentUser.user_id,old_password:oldPassword,new_password:newPassword})
+      });
+      const data = await response.json();
+      message.className = data.success ? 'text-xs text-emerald-400' : 'text-xs text-red-400';
+      message.innerText = data.message || data.error || 'Password update failed.';
+      message.classList.remove('hidden');
+      if (data.success) setTimeout(closeSettingsModal, 1200);
+    } catch (_) {
+      message.className = 'text-xs text-red-400';
+      message.innerText = 'Error updating password.';
+      message.classList.remove('hidden');
+    }
+  };
+
+  async function synchronizeSession() {
+    try {
+      const response = await fetch('/api/session', {credentials:'same-origin'});
+      if (!response.ok) throw new Error('signed out');
+      const data = await response.json();
+      currentUser = {success:true,user_id:data.user_id,username:data.username,email:data.email};
+      localStorage.setItem('doja_user', JSON.stringify(currentUser));
+      initAuth();
+    } catch (_) {
+      localStorage.removeItem('doja_user');
+      currentUser = null;
+      initAuth();
+    }
+  }
+
+  const params = new URLSearchParams(location.search);
+  if (params.has('userId') && params.has('secret')) {
+    setTimeout(async function () {
+      const newPassword = prompt('Enter a new password of at least 8 characters:');
+      if (!newPassword) return;
+      const response = await fetch('/api/reset-password', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({user_id:params.get('userId'),secret:params.get('secret'),new_password:newPassword})
+      });
+      const data = await response.json();
+      alert(data.message || data.error || 'Reset failed.');
+      if (data.success) history.replaceState({}, '', '/');
+    }, 300);
+  }
+  synchronizeSession();
+})();
+</script>
+"""
+    html = html.replace("</body>", bridge + "\n</body>", 1) if "</body>" in html else html + bridge
+    return HTMLResponse(html)
 
 
-@app.get("/health")
-def health():
-    return {"status": "ok", "app": "DOJA AI Studio", "ai_configured": bool(os.getenv("GROQ_API_KEY"))}
-
-
-@app.post("/api/register")
-def register(payload: dict, request: Request):
-    username = str(payload.get("username", "")).strip()
-    email = str(payload.get("email", "")).strip().lower()
-    password = str(payload.get("password", ""))
-    if len(username) < 2 or len(username) > 32:
-        raise HTTPException(400, "Username must be between 2 and 32 characters.")
-    if not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email):
-        raise HTTPException(400, "Please enter a valid email address.")
-    if len(password) < 8:
-        raise HTTPException(400, "Password must be at least 8 characters.")
-    try:
-        if store.find_one("users", "email", email):
-            raise HTTPException(409, "An account with this email already exists.")
-        if store.find_one("users", "username", username):
-            raise HTTPException(409, "That username is already taken.")
-        user = store.create("users", {"username": username, "email": email, "password_hash": bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode(), "created_at": store.now_iso()})
-        token = secrets.token_urlsafe(40)
-        store.create("sessions", {"user_id": user["$id"], "token_hash": hash_token(token), "expires_at": (datetime.now(timezone.utc) + timedelta(days=14)).isoformat(), "created_at": store.now_iso()})
-        resp = JSONResponse({"user": {"id": user["$id"], "username": username, "email": email}})
-        resp.set_cookie(SESSION_COOKIE, token, httponly=True, secure=COOKIE_SECURE, samesite="lax", max_age=14*24*3600, path="/")
-        return resp
-    except HTTPException: raise
-    except Exception as e: raise HTTPException(500, "Registration failed. Check Appwrite collections, attributes, permissions, and server configuration.") from e
+@app.post("/api/signup")
+def signup(req: SignupRequest, request: Request):
+    result = database.create_user(req.username, req.email, req.password)
+    if not result["success"]:
+        return JSONResponse(status_code=400, content=result)
+    login = database.authenticate_user(req.email, req.password)
+    if not login["success"]:
+        return JSONResponse(status_code=201, content=result)
+    response = JSONResponse(content={k:v for k,v in login.items() if k != "session_secret"})
+    set_session(response, login["session_secret"], request)
+    return response
 
 
 @app.post("/api/login")
-def login(payload: dict):
-    email = str(payload.get("email", "")).strip().lower()
-    password = str(payload.get("password", ""))
-    try:
-        user = store.find_one("users", "email", email)
-        if not user or not bcrypt.checkpw(password.encode(), user.get("password_hash", "").encode()):
-            raise HTTPException(401, "Incorrect email or password.")
-        token = secrets.token_urlsafe(40)
-        store.create("sessions", {"user_id": user["$id"], "token_hash": hash_token(token), "expires_at": (datetime.now(timezone.utc) + timedelta(days=14)).isoformat(), "created_at": store.now_iso()})
-        resp = JSONResponse({"user": {"id": user["$id"], "username": user.get("username"), "email": user.get("email")}})
-        resp.set_cookie(SESSION_COOKIE, token, httponly=True, secure=COOKIE_SECURE, samesite="lax", max_age=14*24*3600, path="/")
-        return resp
-    except HTTPException: raise
-    except Exception as e: raise HTTPException(500, "Login failed. Check Appwrite configuration and required collection attributes.") from e
+def login(req: LoginRequest, request: Request):
+    result = database.authenticate_user(req.username_or_email, req.password)
+    if not result["success"]:
+        return JSONResponse(status_code=401, content=result)
+    response = JSONResponse(content={k:v for k,v in result.items() if k != "session_secret"})
+    set_session(response, result["session_secret"], request)
+    return response
+
+
+@app.get("/api/session")
+def session(request: Request):
+    user = current_user(request)
+    return {"success":True,"user_id":user["$id"],"username":user.get("name",""),"email":user.get("email","")}
 
 
 @app.post("/api/logout")
 def logout(request: Request):
-    token = request.cookies.get(SESSION_COOKIE)
-    if token:
-        try:
-            session = store.find_one("sessions", "token_hash", hash_token(token))
-            if session: store.delete("sessions", session["$id"])
-        except Exception: pass
-    resp = JSONResponse({"ok": True})
-    resp.delete_cookie(SESSION_COOKIE, path="/")
-    return resp
+    database.delete_session(request.cookies.get("doja_session", ""))
+    response = JSONResponse({"success":True})
+    clear_session(response)
+    return response
 
 
-@app.get("/api/me")
-def me(request: Request):
-    user = require_user(request)
-    return {"user": {"id": user["$id"], "username": user.get("username"), "email": user.get("email")}}
+@app.post("/api/change-password")
+def change_password(req: ChangePasswordRequest, request: Request):
+    owned_user(request, req.user_id)
+    result = database.change_password(request.cookies.get("doja_session", ""), req.old_password, req.new_password)
+    if not result["success"]:
+        return JSONResponse(status_code=400, content=result)
+    return result
 
 
-@app.get("/api/conversations")
-def conversations(request: Request):
-    user = require_user(request)
-    docs = user_docs("conversations", user["$id"])
-    docs.sort(key=lambda d: d.get("updated_at", d.get("created_at", "")), reverse=True)
-    return {"conversations": [{"id": d["$id"], "title": d.get("title", "Chat"), "created_at": d.get("created_at"), "updated_at": d.get("updated_at")} for d in docs]}
+@app.post("/api/forgot-password")
+def forgot_password(req: ForgotPasswordRequest):
+    if not APPWRITE_RECOVERY_URL:
+        return JSONResponse(status_code=500, content={"success":False,"error":"Password recovery is not configured."})
+    try:
+        database.create_password_reset_token(req.email, APPWRITE_RECOVERY_URL)
+    except RuntimeError:
+        pass
+    return {"success":True,"message":"If the account exists, Appwrite will send a recovery email."}
 
-@app.get("/api/conversations/{conversation_id}/messages")
-def conversation_messages(conversation_id: str, request: Request):
-    user = require_user(request)
-    if not conversation_owned(conversation_id, user["$id"]):
-        raise HTTPException(404, "Conversation not found.")
-    docs = user_docs("messages", user["$id"])
-    docs = [d for d in docs if d.get("conversation_id") == conversation_id]
-    docs.sort(key=lambda d: d.get("created_at", ""))
-    return {"messages": [{"role": d.get("role", "assistant"), "content": d.get("content", "")} for d in docs]}
+
+@app.post("/api/reset-password")
+def reset_password(req: ResetPasswordRequest):
+    result = database.reset_password_with_token(req.token, req.new_password, req.user_id, req.secret)
+    if not result["success"]:
+        return JSONResponse(status_code=400, content=result)
+    return result
+
 
 @app.post("/api/chat")
-def chat(payload: ChatPayload, request: Request):
-    user = require_user(request)
-    return generate_for_chat(user, payload.prompt, payload.history, payload.conversation_id, payload.model)
+def chat(req: ChatRequest, request: Request):
+    user = owned_user(request, req.user_id)
+    try:
+        return {"status":"success","response":doja_engine.chat_with_doja(req.prompt,user["$id"],req.history,req.model)}
+    except Exception:
+        return JSONResponse(status_code=500, content={"status":"error","message":"DOJA could not complete the request."})
 
 
 @app.post("/api/upload")
-async def upload(request: Request, file: UploadFile = File(...), prompt: str = Form(""), model: str = Form(""), conversation_id: str = Form("")):
-    user = require_user(request)
-    name = (file.filename or "upload").lower()
-    if not any(name.endswith(ext) for ext in (".txt", ".md", ".pdf", ".py", ".js", ".html", ".css", ".json", ".csv", ".xml")):
-        raise HTTPException(400, "File type not supported.")
-    raw = await file.read()
-    if len(raw) > 8 * 1024 * 1024:
-        raise HTTPException(413, "File is larger than the 8 MB upload limit.")
+async def upload_file(request: Request, file: UploadFile = File(...), prompt: str = Form(""), user_id: str = Form(""), model: str = Form("openai/gpt-oss-120b")):
+    user = owned_user(request, user_id)
+    content = await file.read(8388609)
+    if len(content) > 8388608:
+        raise HTTPException(status_code=413, detail="File exceeds the 8 MB analysis limit.")
+    text = content.decode("utf-8", errors="ignore")[:6000] or "[Binary content]"
+    combined = f"File: {Path(file.filename or 'upload').name}\n\nContent:\n{text}\n\nRequest: {prompt or 'Analyze this file and summarize.'}"
     try:
-        if name.endswith(".pdf"):
-            from pypdf import PdfReader
-            reader = PdfReader(io.BytesIO(raw))
-            text = "\n".join(page.extract_text() or "" for page in reader.pages)
-        else:
-            text = raw.decode("utf-8", errors="replace")
-    except Exception as e:
-        raise HTTPException(400, "Could not read this file. If it is a PDF, ensure it contains selectable text.") from e
-    task = prompt.strip() or f"Analyze the uploaded file named {file.filename}. Summarize it and identify important details."
-    return generate_for_chat(user, task, [], conversation_id or None, model or None, file_context=f"File: {file.filename}\n\n{text}")
+        return {"status":"success","response":doja_engine.chat_with_doja(combined,user["$id"],[],model)}
+    except Exception:
+        return JSONResponse(status_code=500, content={"status":"error","message":"DOJA could not analyze that file."})
 
-@app.get("/api/projects")
-def get_projects(request: Request):
-    user = require_user(request)
-    docs = user_docs("projects", user["$id"])
-    docs.sort(key=lambda d: d.get("updated_at", d.get("created_at", "")), reverse=True)
-    return {"projects": [{"id": d["$id"], "title": d.get("title", "Untitled"), "content": d.get("content", ""), "created_at": d.get("created_at"), "updated_at": d.get("updated_at")} for d in docs]}
-@app.post("/api/projects")
-def save_project(payload: ProjectPayload, request: Request):
-    user = require_user(request)
-    title = payload.title.strip()
-    if not title: raise HTTPException(400, "Project title is required.")
-    data = {"user_id": user["$id"], "title": title[:120], "content": payload.content[:50000], "updated_at": store.now_iso()}
-    if payload.project_id:
-        try:
-            existing = store.get("projects", payload.project_id)
-            if existing.get("user_id") != user["$id"]: raise HTTPException(404, "Project not found.")
-            project = store.update("projects", payload.project_id, data)
-        except HTTPException: raise
-        except Exception as e: raise HTTPException(404, "Project not found.") from e
-    else:
-        data["created_at"] = store.now_iso()
-        project = store.create("projects", data)
-    return {"project": {"id": project["$id"], "title": project.get("title", title), "content": project.get("content", payload.content)}}
+
+@app.get("/api/download-zip")
+def download_workspace_zip(request: Request):
+    user = current_user(request)
+    files = database.list_workspace_files(user["$id"])
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        for name, content in files.items():
+            archive.writestr(name, content)
+    buffer.seek(0)
+    return StreamingResponse(buffer, media_type="application/zip", headers={"Content-Disposition":"attachment; filename=doja_ai_project.zip"})
+
+
+@app.get("/api/get-code")
+def get_workspace_code(request: Request):
+    user = current_user(request)
+    return {"files":database.list_workspace_files(user["$id"])}
+
+
+@app.get("/api/projects/{user_id}")
+def projects(user_id: str, request: Request):
+    user = owned_user(request, user_id)
+    return {"projects":database.get_user_projects(user["$id"])}
+
+
+@app.get("/api/projects/{project_id}/load")
+def load_project(project_id: str, user_id: str, request: Request):
+    user = owned_user(request, user_id)
+    messages = database.get_project(project_id, user["$id"])
+    if messages is None:
+        return JSONResponse(status_code=404, content={"success":False,"error":"Project not found."})
+    return {"messages":messages}
+
+
 @app.delete("/api/projects/{project_id}")
-def delete_project(project_id: str, request: Request):
-    user = require_user(request)
-    try:
-        project = store.get("projects", project_id)
-        if project.get("user_id") != user["$id"]: raise HTTPException(404, "Project not found.")
-        store.delete("projects", project_id)
-        return {"ok": True}
-    except HTTPException: raise
-    except Exception as e: raise HTTPException(404, "Project not found.") from e
+def delete_project(project_id: str, user_id: str, request: Request):
+    user = owned_user(request, user_id)
+    database.delete_project(project_id, user["$id"])
+    return {"success":True}
 
-@app.get("/api/settings")
-def get_settings(request: Request):
-    user = require_user(request)
-    doc = store.find_one("settings", "user_id", user["$id"])
-    return {"settings": {"theme": (doc or {}).get("theme", "neon"), "model": (doc or {}).get("model", doja_engine.MODEL_DEFAULT)}}
+
 @app.post("/api/settings")
-def save_settings(payload: SettingsPayload, request: Request):
-    user = require_user(request)
-    data = {"user_id": user["$id"], "theme": (payload.theme or "neon")[:30], "model": (payload.model or doja_engine.MODEL_DEFAULT)[:120], "updated_at": store.now_iso()}
-    existing = store.find_one("settings", "user_id", user["$id"])
-    if existing: store.update("settings", existing["$id"], data)
-    else: data["created_at"] = store.now_iso(); store.create("settings", data)
-    return {"settings": {"theme": data["theme"], "model": data["model"]}}
-@app.post("/api/search")
-def search(payload: SearchPayload, request: Request):
-    require_user(request)
-    results = doja_engine.web_search(payload.query, 8)
-    if not results: return {"results": [], "message": "Search returned no results or is temporarily unavailable."}
-    return {"results": results}
-@app.post("/api/images")
-def images(payload: ImagePayload, request: Request):
-    require_user(request)
-    if not payload.prompt.strip(): raise HTTPException(400, "Enter an image description.")
-    url = doja_engine.image_url(payload.prompt.strip(), payload.style, payload.ratio)
-    return {"image_url": url, "notice": "This uses a third-party image endpoint. Availability and safety filtering depend on that service."}
-@app.post("/api/code-assistant")
-def code_assistant(payload: ChatPayload, request: Request):
-    user = require_user(request)
-    code_context = ""
-    # The frontend includes editor contents at the beginning of the prompt.
-    return {"response": doja_engine.chat_with_doja(payload.prompt, payload.history, payload.model, code_context)}
+def save_settings(req: SettingsRequest, request: Request):
+    user = owned_user(request, req.user_id)
+    database.save_user_instructions(user["$id"], req.custom_instructions.strip())
+    return {"success":True}
+
+
+@app.get("/api/settings/{user_id}")
+def get_settings(user_id: str, request: Request):
+    user = owned_user(request, user_id)
+    return {"custom_instructions":database.get_user_instructions(user["$id"])}
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT","8000")))
