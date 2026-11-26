@@ -9,7 +9,7 @@ from openai import OpenAI
 import database
 
 API_KEY = os.getenv("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")
-if not API_KEY:standard_47717f0b2e68a9b45bd06935e5ecde0fc58bba58fac5c849bd67264b89a25a1ff351a54ae17651b584042ff9d520affeb2116226641db2324a13678a447d386a11746d399aaa7641bcd8bcb2f7f950a7a0a423e2af435e6e32113865f4ef47782769f0949c4686f8b60a499f8e658a430c3710428f58430c9a799efd483c650b
+if not API_KEY:
     raise RuntimeError("GROQ_API_KEY is not configured in the environment.")
 client = OpenAI(base_url="https://api.groq.com/openai/v1", api_key=API_KEY)
 CURRENT_USER_ID = ContextVar("doja_user_id", default=None)
