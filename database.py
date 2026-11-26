@@ -1,249 +1,1016 @@
-import json
-import os
-from pathlib import Path
-from urllib.parse import quote
-import requests
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DOJA AI</title>
 
-APPWRITE_ENDPOINT = os.getenv("APPWRITE_ENDPOINT", "https://nyc.cloud.appwrite.io/v1").rstrip("/")
-APPWRITE_PROJECT_ID = os.getenv("APPWRITE_PROJECT_ID", "")
-APPWRITE_API_KEY = os.getenv("APPWRITE_API_KEY", "")
-APPWRITE_DATABASE_ID = os.getenv("APPWRITE_DATABASE_ID", "")
-APPWRITE_PROJECTS_TABLE_ID = os.getenv("APPWRITE_PROJECTS_TABLE_ID", "doja_projects")
-APPWRITE_SETTINGS_TABLE_ID = os.getenv("APPWRITE_SETTINGS_TABLE_ID", "doja_user_settings")
-APPWRITE_WORKSPACE_BUCKET_ID = os.getenv("APPWRITE_WORKSPACE_BUCKET_ID", "doja_workspace")
+  <!-- Colorful Vibrant DOJA Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'><defs><linearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' stop-color='%2300f2fe'/><stop offset='35%25' stop-color='%233b82f6'/><stop offset='70%25' stop-color='%23a855f7'/><stop offset='100%25' stop-color='%23f43f5e'/></linearGradient></defs><rect x='8' y='8' width='104' height='104' rx='28' fill='%23090d16' stroke='url(%23g)' stroke-width='4'/><rect x='34' y='32' width='13' height='56' rx='6.5' fill='url(%23g)'/><path d='M42 32 H65 C78 32 88 41 88 54 C88 62 83 69 76 72' stroke='url(%23g)' stroke-width='12' stroke-linecap='round'/><circle cx='60' cy='60' r='6' fill='%2300f2fe'/></svg>">
 
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 
-def init_db():
-    missing = [name for name, value in {"APPWRITE_PROJECT_ID": APPWRITE_PROJECT_ID, "APPWRITE_API_KEY": APPWRITE_API_KEY, "APPWRITE_DATABASE_ID": APPWRITE_DATABASE_ID}.items() if not value]
-    if missing:
-        raise RuntimeError("Missing Appwrite environment variable(s): " + ", ".join(missing))
+  <style>
+    /* 5 High-End Themes */
+    body.theme-neon { background-color: #080417; color: #f8fafc; --sidebar: #05020f; --card: #12092b; --accent: #ec4899; --accent-glow: rgba(236,72,153,0.35); --border: #281452; }
+    body.theme-gradient { background-color: #0b071e; color: #fdf2f8; --sidebar: #070414; --card: #150f38; --accent: #f97316; --accent-glow: rgba(249,115,22,0.35); --border: #311f6d; }
+    body.theme-luxury { background-color: #0a0a0c; color: #fef08a; --sidebar: #050507; --card: #17161b; --accent: #eab308; --accent-glow: rgba(234,179,8,0.3); --border: #3a3424; }
+    body.theme-aurora { background-color: #031416; color: #e6fffa; --sidebar: #020d0f; --card: #08282c; --accent: #14b8a6; --accent-glow: rgba(20,184,166,0.35); --border: #134e4a; }
+    body.theme-chatgpt { background-color: #212121; color: #ececec; --sidebar: #171717; --card: #2f2f2f; --accent: #10a37f; --accent-glow: rgba(16,163,127,0.3); --border: #3b3b3b; }
 
+    /* Free-Floating Typography */
+    .prose-doja p { margin-bottom: 1.25rem; line-height: 1.85; font-size: 0.95rem; }
+    .prose-doja strong { color: #fff; font-weight: 700; }
+    .prose-doja hr, .prose-doja table { display: none !important; }
+    .prose-doja img { border-radius: 1.25rem; margin: 1.5rem 0; width: 100%; max-height: 520px; object-fit: cover; border: 1px solid var(--border); box-shadow: 0 20px 35px -10px rgba(0,0,0,0.7); display: block; }
+    pre { background: #121215 !important; border: 1px solid var(--border); border-radius: 0.85rem; padding: 1.1rem; position: relative; margin: 1.2rem 0; }
 
-def _admin_headers():
-    return {"X-Appwrite-Project": APPWRITE_PROJECT_ID, "X-Appwrite-Key": APPWRITE_API_KEY}
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
+  </style>
+</head>
+<body class="theme-neon h-screen flex flex-col font-sans overflow-hidden transition-colors duration-500">
 
+  <!-- ================= AUTH MODAL ================= -->
+  <div id="authModal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 hidden">
+    <div class="bg-[var(--card)] border border-[var(--border)] p-8 rounded-3xl w-full max-w-md shadow-2xl">
+      <div class="flex items-center gap-3 mb-6">
+        <svg class="w-10 h-10 drop-shadow-[0_0_14px_rgba(236,72,153,0.6)]" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="dojaGradAuth" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00f2fe"/><stop offset="35%" stop-color="#3b82f6"/><stop offset="70%" stop-color="#a855f7"/><stop offset="100%" stop-color="#f43f5e"/></linearGradient></defs><rect x="8" y="8" width="104" height="104" rx="28" fill="#090d16" stroke="url(#dojaGradAuth)" stroke-width="4"/><rect x="34" y="32" width="13" height="56" rx="6.5" fill="url(#dojaGradAuth)"/><path d="M42 32 H65 C78 32 88 41 88 54 C88 62 83 69 76 72" stroke="url(#dojaGradAuth)" stroke-width="12" stroke-linecap="round"/><circle cx="60" cy="60" r="6" fill="#00f2fe"/></svg>
+        <div>
+          <h2 class="text-xl font-bold text-white">DOJA AI</h2>
+          <p class="text-xs text-slate-400">Universal Intelligence, Development & Research</p>
+        </div>
+      </div>
 
-def _session_headers(secret):
-    return {"X-Appwrite-Project": APPWRITE_PROJECT_ID, "X-Appwrite-Session": secret}
+      <div class="flex border-b border-[var(--border)] mb-6">
+        <button id="tabLogin" onclick="switchAuthTab('login')" class="flex-1 pb-3 text-sm font-semibold text-[var(--accent)] border-b-2 border-[var(--accent)]">Log In</button>
+        <button id="tabSignup" onclick="switchAuthTab('signup')" class="flex-1 pb-3 text-sm font-semibold text-slate-400">Create Account</button>
+      </div>
 
+      <form id="authForm" class="space-y-4">
+        <div>
+          <label id="userLabel" class="text-xs font-medium text-slate-400">Username or Gmail</label>
+          <input type="text" id="authUsername" required class="w-full mt-1 bg-black/40 border border-[var(--border)] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[var(--accent)]">
+        </div>
 
-def _request(method, url, headers=None, json_body=None, params=None, timeout=25):
-    response = requests.request(method, url, headers=headers or _admin_headers(), json=json_body, params=params, timeout=timeout)
-    if not response.ok:
-        try:
-            message = response.json().get("message", "Appwrite request failed")
-        except Exception:
-            message = "Appwrite request failed"
-        raise RuntimeError(f"Appwrite HTTP {response.status_code}: {message}")
-    if not response.content:
-        return {}
-    return response.json() if "application/json" in response.headers.get("content-type", "") else response.content
+        <div id="emailField" class="hidden">
+          <label class="text-xs font-medium text-slate-400">Gmail Address</label>
+          <input type="email" id="authEmail" class="w-full mt-1 bg-black/40 border border-[var(--border)] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[var(--accent)]">
+        </div>
 
+        <div>
+          <div class="flex justify-between items-center">
+            <label class="text-xs font-medium text-slate-400">Password</label>
+            <button type="button" onclick="openForgotModal()" class="text-xs text-[var(--accent)] hover:underline">Forgot password?</button>
+          </div>
+          <input type="password" id="authPassword" required class="w-full mt-1 bg-black/40 border border-[var(--border)] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[var(--accent)]">
+        </div>
 
-def _rows_url(table_id, row_id=None):
-    url = f"{APPWRITE_ENDPOINT}/tablesdb/{quote(APPWRITE_DATABASE_ID, safe='')}/tables/{quote(table_id, safe='')}/rows"
-    return f"{url}/{quote(str(row_id), safe='')}" if row_id else url
+        <p id="authError" class="text-xs text-red-400 hidden"></p>
+        <button type="submit" id="authSubmitBtn" class="w-full py-3 bg-[var(--accent)] hover:opacity-95 text-white font-semibold rounded-xl transition shadow-lg">
+          Sign In
+        </button>
+      </form>
+    </div>
+  </div>
 
+  <!-- ================= 📚 LIBRARY MODAL ================= -->
+  <div id="libraryModal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 hidden">
+    <div class="bg-[var(--card)] border border-[var(--border)] p-6 sm:p-8 rounded-3xl w-full max-w-xl shadow-2xl">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-book-bookmark text-[var(--accent)]"></i> Library & Workspace Files
+        </h3>
+        <button onclick="closeLibraryModal()" class="text-slate-400 hover:text-white text-lg">&times;</button>
+      </div>
+      <p class="text-xs text-slate-400 mb-4">Access all code, websites, games, and files created in DOJA AI.</p>
+      
+      <div id="libraryFileList" class="space-y-2 max-h-60 overflow-y-auto pr-1 text-xs">
+        <p class="text-slate-500 py-4 text-center">Loading files...</p>
+      </div>
 
-def _storage_url(file_id=None, view=False):
-    url = f"{APPWRITE_ENDPOINT}/storage/buckets/{quote(APPWRITE_WORKSPACE_BUCKET_ID, safe='')}/files"
-    if file_id:
-        url += f"/{quote(str(file_id), safe='')}"
-    return url + ("/view" if view else "")
+      <div class="flex justify-between items-center mt-6 pt-4 border-t border-[var(--border)]">
+        <a href="/api/download-zip" class="text-xs px-4 py-2 bg-[var(--accent)] text-white font-semibold rounded-xl transition flex items-center gap-1.5">
+          <i class="fa-solid fa-file-zipper"></i> Download All as .ZIP
+        </a>
+        <button onclick="closeLibraryModal()" class="text-xs px-4 py-2 bg-white/5 hover:bg-white/10 text-slate-300 rounded-xl transition">Close</button>
+      </div>
+    </div>
+  </div>
 
+  <!-- ================= 🎨 IMAGES STUDIO MODAL ================= -->
+  <div id="imagesModal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 hidden">
+    <div class="bg-[var(--card)] border border-[var(--border)] p-6 sm:p-8 rounded-3xl w-full max-w-2xl shadow-2xl">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-wand-magic-sparkles text-[var(--accent)]"></i> AI Images Studio
+        </h3>
+        <button onclick="closeImagesModal()" class="text-slate-400 hover:text-white text-lg">&times;</button>
+      </div>
+      <p class="text-xs text-slate-400 mb-4">Click any preset below to generate art immediately:</p>
 
-def create_user(username, email, password):
-    username, email = username.strip(), email.strip().lower()
-    if not username or not email or len(password) < 8:
-        return {"success": False, "error": "Enter a username, valid email, and password of at least 8 characters."}
-    try:
-        user = _request("POST", f"{APPWRITE_ENDPOINT}/users", json_body={"userId": "unique()", "email": email, "password": password, "name": username})
-        return {"success": True, "user_id": user["$id"], "username": username, "email": email}
-    except RuntimeError as error:
-        if "409" in str(error):
-            return {"success": False, "error": "That email is already registered."}
-        return {"success": False, "error": "Could not create the Appwrite account."}
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-4">
+        <button onclick="triggerQuickImage('Futuristic neon cyber city with flying vehicles, 8k cinematic lighting, photorealistic')" class="p-3 bg-white/5 hover:bg-white/10 rounded-2xl border border-[var(--border)] text-left transition">
+          <p class="text-xs font-semibold text-white">🌆 Cyber City</p>
+          <p class="text-[10px] text-slate-400">Neon 8K landscape</p>
+        </button>
+        <button onclick="triggerQuickImage('Smallholder organic farm in Uganda with lush green maize crops and dairy cows at sunrise, photorealistic 8k')" class="p-3 bg-white/5 hover:bg-white/10 rounded-2xl border border-[var(--border)] text-left transition">
+          <p class="text-xs font-semibold text-white">🌾 Lush Farm</p>
+          <p class="text-[10px] text-slate-400">Ugandan landscape</p>
+        </button>
+        <button onclick="triggerQuickImage('Detailed biological cell diagram showing organelles, nucleus and mitochondria, clean science illustration')" class="p-3 bg-white/5 hover:bg-white/10 rounded-2xl border border-[var(--border)] text-left transition">
+          <p class="text-xs font-semibold text-white">🔬 Cell Diagram</p>
+          <p class="text-[10px] text-slate-400">Scientific visual</p>
+        </button>
+      </div>
 
+      <div class="border-t border-[var(--border)] pt-4 flex justify-end">
+        <button onclick="closeImagesModal()" class="text-xs px-4 py-2 bg-white/5 hover:bg-white/10 text-slate-300 rounded-xl transition">Close</button>
+      </div>
+    </div>
+  </div>
 
-def _resolve_email(identifier):
-    identifier = identifier.strip()
-    if "@" in identifier:
-        return identifier.lower()
-    result = _request("GET", f"{APPWRITE_ENDPOINT}/users", params=[("queries[]", f'search("name", {json.dumps(identifier)})'), ("limit", "10")])
-    matches = [u for u in result.get("users", []) if u.get("name", "").casefold() == identifier.casefold()]
-    return matches[0].get("email") if len(matches) == 1 else None
+  <!-- ================= ⚙️ SETTINGS & PROFILE MODAL ================= -->
+  <div id="settingsModal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 hidden">
+    <div class="bg-[var(--card)] border border-[var(--border)] p-8 rounded-3xl w-full max-w-lg shadow-2xl">
+      <div class="flex border-b border-[var(--border)] mb-6">
+        <button id="setTabThemes" onclick="switchSettingsTab('themes')" class="flex-1 pb-3 text-xs font-bold text-[var(--accent)] border-b-2 border-[var(--accent)] uppercase tracking-wider">Appearance</button>
+        <button id="setTabInst" onclick="switchSettingsTab('inst')" class="flex-1 pb-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Instructions</button>
+        <button id="setTabPass" onclick="switchSettingsTab('pass')" class="flex-1 pb-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Security</button>
+      </div>
 
+      <!-- Themes Tab -->
+      <div id="settingsThemesSection" class="space-y-3">
+        <p class="text-xs text-slate-400 mb-2">Choose your preferred workspace aesthetic:</p>
+        <div class="grid grid-cols-1 gap-2">
+          <button onclick="changeTheme('neon')" class="flex items-center justify-between p-3 rounded-xl border border-[var(--border)] bg-black/30 hover:bg-white/5 transition text-xs font-semibold text-pink-400">
+            <span>🌌 Neon AI Universe (Cyberpunk Glass)</span>
+            <i class="fa-solid fa-sparkles"></i>
+          </button>
+          <button onclick="changeTheme('gradient')" class="flex items-center justify-between p-3 rounded-xl border border-[var(--border)] bg-black/30 hover:bg-white/5 transition text-xs font-semibold text-orange-400">
+            <span>🎨 Colorful Gradient (Vibrant Energy)</span>
+            <i class="fa-solid fa-palette"></i>
+          </button>
+          <button onclick="changeTheme('luxury')" class="flex items-center justify-between p-3 rounded-xl border border-[var(--border)] bg-black/30 hover:bg-white/5 transition text-xs font-semibold text-yellow-400">
+            <span>👑 Luxury AI Gold (Obsidian & Champagne)</span>
+            <i class="fa-solid fa-crown"></i>
+          </button>
+          <button onclick="changeTheme('aurora')" class="flex items-center justify-between p-3 rounded-xl border border-[var(--border)] bg-black/30 hover:bg-white/5 transition text-xs font-semibold text-teal-300">
+            <span>🌿 Aurora Glass (Teal & Mint Transparency)</span>
+            <i class="fa-solid fa-leaf"></i>
+          </button>
+          <button onclick="changeTheme('chatgpt')" class="flex items-center justify-between p-3 rounded-xl border border-[var(--border)] bg-black/30 hover:bg-white/5 transition text-xs font-semibold text-emerald-400">
+            <span>⚡ ChatGPT Clean (Minimalist Monochrome)</span>
+            <i class="fa-solid fa-bolt"></i>
+          </button>
+        </div>
+        <div class="mt-4 pt-2 text-right">
+          <button onclick="closeSettingsModal()" class="px-5 py-2.5 bg-[var(--accent)] text-white rounded-xl text-xs font-semibold">Done</button>
+        </div>
+      </div>
 
-def authenticate_user(username_or_email, password):
-    email = _resolve_email(username_or_email)
-    if not email:
-        return {"success": False, "error": "Account not found or username is ambiguous."}
-    try:
-        session = _request("POST", f"{APPWRITE_ENDPOINT}/account/sessions/email", headers={"X-Appwrite-Project": APPWRITE_PROJECT_ID}, json_body={"email": email, "password": password})
-        account = get_account_from_session(session["secret"])
-        if not account:
-            return {"success": False, "error": "Could not verify the Appwrite session."}
-        return {"success": True, "user_id": account["$id"], "username": account.get("name", ""), "email": account.get("email", ""), "session_secret": session["secret"]}
-    except RuntimeError:
-        return {"success": False, "error": "Incorrect email/username or password."}
+      <!-- Instructions Tab -->
+      <div id="settingsInstSection" class="hidden space-y-3">
+        <p class="text-xs text-slate-400 mb-2">What should DOJA AI remember about you?</p>
+        <textarea id="customInstructionsInput" rows="5" placeholder="e.g. I am a software engineer building games in Godot. Always be concise, provide code without filler, and address me as Chief." class="w-full bg-black/40 border border-[var(--border)] rounded-xl p-4 text-sm text-white focus:outline-none focus:border-[var(--accent)]"></textarea>
+        <div class="flex gap-2 mt-4">
+          <button onclick="closeSettingsModal()" class="flex-1 py-3 bg-black/40 text-slate-300 rounded-xl text-xs font-semibold">Cancel</button>
+          <button onclick="saveSettings()" class="flex-1 py-3 bg-[var(--accent)] text-white rounded-xl text-xs font-semibold shadow-lg">Save Preferences</button>
+        </div>
+      </div>
 
+      <!-- Password Tab -->
+      <div id="settingsPassSection" class="hidden space-y-3">
+        <div>
+          <label class="text-xs text-slate-400">Current Password</label>
+          <input type="password" id="oldPasswordInput" class="w-full mt-1 bg-black/40 border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm text-white">
+        </div>
+        <div>
+          <label class="text-xs text-slate-400">New Password</label>
+          <input type="password" id="newPasswordInput" class="w-full mt-1 bg-black/40 border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm text-white">
+        </div>
+        <p id="passChangeMsg" class="text-xs hidden"></p>
+        <div class="flex gap-2 mt-4">
+          <button onclick="closeSettingsModal()" class="flex-1 py-3 bg-black/40 text-slate-300 rounded-xl text-xs font-semibold">Cancel</button>
+          <button onclick="submitChangePassword()" class="flex-1 py-3 bg-[var(--accent)] text-white rounded-xl text-xs font-semibold">Update Password</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
-def get_account_from_session(secret):
-    if not secret:
-        return None
-    try:
-        return _request("GET", f"{APPWRITE_ENDPOINT}/account", headers=_session_headers(secret))
-    except RuntimeError:
-        return None
+  <!-- ================= FORGOT PASSWORD MODAL ================= -->
+  <div id="forgotModal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 hidden">
+    <div class="bg-[var(--card)] border border-[var(--border)] p-8 rounded-3xl w-full max-w-md shadow-2xl">
+      <h3 class="text-lg font-bold text-white mb-2">Reset Password</h3>
+      <p class="text-xs text-slate-400 mb-4">Enter your Gmail address to receive a secure reset link.</p>
+      <form id="forgotForm" class="space-y-4">
+        <input type="email" id="forgotEmail" required placeholder="your.email@gmail.com" class="w-full bg-black/40 border border-[var(--border)] rounded-xl px-4 py-3 text-sm text-white">
+        <p id="forgotMsg" class="text-xs hidden"></p>
+        <div class="flex gap-2">
+          <button type="button" onclick="closeForgotModal()" class="flex-1 py-3 bg-black/40 text-slate-300 rounded-xl text-xs font-semibold">Cancel</button>
+          <button type="submit" class="flex-1 py-3 bg-[var(--accent)] text-white rounded-xl text-xs font-semibold">Send Link</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
+  <!-- ================= MAIN APP LAYOUT ================= -->
+  <div class="flex-1 flex overflow-hidden">
 
-def delete_session(secret):
-    if not secret:
-        return
-    try:
-        _request("DELETE", f"{APPWRITE_ENDPOINT}/account/sessions/current", headers=_session_headers(secret))
-    except RuntimeError:
-        pass
+    <!-- ================= UPGRADED CHATGPT-STYLE SIDEBAR ================= -->
+    <aside class="w-64 bg-[var(--sidebar)] border-r border-[var(--border)] flex flex-col justify-between transition-all select-none">
+      <div class="flex-1 flex flex-col min-h-0">
+        
+        <!-- Header: Logo & Branding -->
+        <div class="p-3 border-b border-[var(--border)] flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <svg class="w-7 h-7 drop-shadow-[0_0_10px_rgba(236,72,153,0.6)]" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="dojaGradSide" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00f2fe"/><stop offset="35%" stop-color="#3b82f6"/><stop offset="70%" stop-color="#a855f7"/><stop offset="100%" stop-color="#f43f5e"/></linearGradient></defs><rect x="8" y="8" width="104" height="104" rx="28" fill="#090d16" stroke="url(#dojaGradSide)" stroke-width="4"/><rect x="34" y="32" width="13" height="56" rx="6.5" fill="url(#dojaGradSide)"/><path d="M42 32 H65 C78 32 88 41 88 54 C88 62 83 69 76 72" stroke="url(#dojaGradSide)" stroke-width="12" stroke-linecap="round"/><circle cx="60" cy="60" r="6" fill="#00f2fe"/></svg>
+            <span class="font-bold text-sm tracking-wide text-white">DOJA AI</span>
+          </div>
+          <button onclick="newChat()" title="Start New Chat" class="w-7 h-7 rounded-lg hover:bg-white/10 flex items-center justify-center text-slate-300 hover:text-white transition">
+            <i class="fa-solid fa-pen-to-square text-xs"></i>
+          </button>
+        </div>
 
+        <!-- 6 CORE CHATGPT-STYLE SIDEBAR OPTIONS -->
+        <div class="p-2 space-y-1 border-b border-[var(--border)] text-xs">
+          <!-- 1. New Chat -->
+          <button onclick="newChat()" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-[var(--accent)] text-white font-medium hover:opacity-95 transition shadow-sm">
+            <i class="fa-solid fa-plus text-xs"></i>
+            <span>New Chat</span>
+          </button>
 
-def change_password(session_secret, old_password, new_password):
-    if len(new_password) < 8:
-        return {"success": False, "error": "Password must contain at least 8 characters."}
-    try:
-        _request("PATCH", f"{APPWRITE_ENDPOINT}/account/password", headers=_session_headers(session_secret), json_body={"password": new_password, "oldPassword": old_password})
-        return {"success": True, "message": "Password updated successfully."}
-    except RuntimeError:
-        return {"success": False, "error": "Current password is incorrect or the session expired."}
+          <!-- 2. Search -->
+          <div class="relative">
+            <input 
+              type="text" 
+              id="sidebarSearchInput" 
+              oninput="filterProjects(this.value)" 
+              placeholder="Search chats & docs..." 
+              class="w-full bg-white/5 border border-[var(--border)] text-xs text-white rounded-xl pl-8 pr-3 py-1.5 focus:outline-none focus:border-[var(--accent)] transition"
+            >
+            <i class="fa-solid fa-magnifying-glass text-[11px] text-slate-400 absolute left-2.5 top-2.5"></i>
+          </div>
 
+          <!-- 3. Library -->
+          <button onclick="openLibraryModal()" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-300 hover:bg-white/5 hover:text-white transition">
+            <i class="fa-solid fa-book-bookmark text-xs text-[var(--accent)]"></i>
+            <span>Library</span>
+          </button>
 
-def create_password_reset_token(email, recovery_url):
-    if not recovery_url:
-        raise RuntimeError("APPWRITE_RECOVERY_URL is not configured")
-    return _request("POST", f"{APPWRITE_ENDPOINT}/account/recovery", headers={"X-Appwrite-Project": APPWRITE_PROJECT_ID}, json_body={"email": email.strip().lower(), "url": recovery_url})
+          <!-- 4. Images -->
+          <button onclick="openImagesModal()" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-300 hover:bg-white/5 hover:text-white transition">
+            <i class="fa-solid fa-wand-magic-sparkles text-xs text-amber-400"></i>
+            <span>Images Studio</span>
+          </button>
 
+          <!-- 5. Projects Section Header -->
+          <div class="pt-2 px-3 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            <span>Projects & History</span>
+            <span id="projectCountBadge" class="px-1.5 py-0.5 rounded-full bg-white/10 text-slate-400 text-[9px]">0</span>
+          </div>
+        </div>
 
-def reset_password_with_token(token, new_password, user_id="", secret=""):
-    if (not user_id or not secret) and isinstance(token, str) and ":" in token:
-        user_id, secret = token.split(":", 1)
-    if not user_id or not secret or len(new_password) < 8:
-        return {"success": False, "error": "Invalid recovery link or password (minimum 8 characters)."}
-    try:
-        _request("PUT", f"{APPWRITE_ENDPOINT}/account/recovery", headers={"X-Appwrite-Project": APPWRITE_PROJECT_ID}, json_body={"userId": user_id, "secret": secret, "password": new_password})
-        return {"success": True, "message": "Password reset successfully. Please sign in again."}
-    except RuntimeError:
-        return {"success": False, "error": "Invalid or expired reset link."}
+        <!-- Scrollable Saved Chats List -->
+        <div class="flex-1 overflow-y-auto p-2 space-y-1 text-xs" id="projectList">
+          <p class="text-slate-500 px-3 py-2">No saved projects yet.</p>
+        </div>
+      </div>
 
+      <!-- BOTTOM NAVIGATION: Settings, Themes & Profile -->
+      <div class="p-3 border-t border-[var(--border)] space-y-2">
+        <!-- 6. Settings -->
+        <button onclick="openSettingsModal()" class="w-full flex items-center justify-between px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl border border-[var(--border)] text-xs text-slate-300 transition">
+          <span class="flex items-center gap-2"><i class="fa-solid fa-sliders text-[var(--accent)]"></i> Settings</span>
+          <i class="fa-solid fa-chevron-right text-[10px] text-slate-400"></i>
+        </button>
 
-def _list_rows(table_id, queries):
-    result = _request("GET", _rows_url(table_id), params=[("queries[]", query) for query in queries])
-    return result.get("rows", [])
+        <!-- User Profile Pill with Logout -->
+        <div class="flex items-center justify-between px-3 py-2 bg-white/5 rounded-xl border border-[var(--border)]">
+          <div class="flex items-center gap-2">
+            <div class="w-6 h-6 rounded-full bg-gradient-to-tr from-indigo-500 to-pink-500 flex items-center justify-center text-[10px] font-bold text-white" id="userAvatar">U</div>
+            <span id="userNameDisplay" class="text-xs font-medium text-slate-200">User</span>
+          </div>
+          <button onclick="logout()" title="Logout" class="text-slate-400 hover:text-red-400 text-xs transition">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+          </button>
+        </div>
+      </div>
+    </aside>
 
+    <!-- CENTER CHAT AREA -->
+    <main class="flex-1 flex flex-col bg-transparent relative">
+      <header class="h-14 border-b border-[var(--border)] px-6 flex items-center justify-between bg-black/10 backdrop-blur-md">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <select id="modelSelect" class="bg-white/5 border border-[var(--border)] text-xs text-slate-200 rounded-lg px-2.5 py-1 focus:outline-none cursor-pointer">
+            <option value="openai/gpt-oss-120b">DOJA 120B (Standard Flagship)</option>
+            <option value="llama-3.3-70b-versatile">DOJA Fast (Llama 70B)</option>
+          </select>
+        </div>
 
-def save_project(user_id, title, prompt, code_content, messages=None, language="html"):
-    messages = messages if isinstance(messages, list) else []
-    result = _request("POST", _rows_url(APPWRITE_PROJECTS_TABLE_ID), json_body={"rowId":"unique()","data":{"user_id":str(user_id),"title":str(title)[:500],"prompt":str(prompt)[:20000],"code_content":str(code_content)[:900000],"language":str(language)[:100],"messages":json.dumps(messages, ensure_ascii=False)}})
-    return result["$id"]
+        <div class="flex items-center gap-2">
+          <button onclick="shareConversation()" class="text-xs px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 transition border border-[var(--border)] flex items-center gap-1.5">
+            <i class="fa-solid fa-share-nodes"></i> Share
+          </button>
+          <button onclick="togglePreview()" class="text-xs px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 transition border border-[var(--border)] flex items-center gap-1.5">
+            <i class="fa-solid fa-display"></i> Workspace
+          </button>
+        </div>
+      </header>
 
+      <!-- Message History -->
+      <div id="chatHistory" class="flex-1 p-6 overflow-y-auto space-y-6 max-w-4xl w-full mx-auto">
+        <div id="heroWelcome" class="text-center py-12 space-y-6">
+          <div class="inline-flex p-4 rounded-3xl bg-[var(--card)] border border-[var(--border)] shadow-xl">
+            <svg class="w-12 h-12" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="heroGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00f2fe"/><stop offset="35%" stop-color="#3b82f6"/><stop offset="70%" stop-color="#a855f7"/><stop offset="100%" stop-color="#f43f5e"/></linearGradient></defs><rect x="8" y="8" width="104" height="104" rx="28" fill="#090d16" stroke="url(#heroGrad)" stroke-width="4"/><rect x="34" y="32" width="13" height="56" rx="6.5" fill="url(#heroGrad)"/><path d="M42 32 H65 C78 32 88 41 88 54 C88 62 83 69 76 72" stroke="url(#heroGrad)" stroke-width="12" stroke-linecap="round"/><circle cx="60" cy="60" r="6" fill="#00f2fe"/></svg>
+          </div>
+          <h2 class="text-2xl font-bold text-white tracking-tight">What can I help you create?</h2>
+          <p class="text-xs text-slate-400 max-w-md mx-auto">Your intelligent creative workspace for 2D/3D games, visual AI art, code in any language, and multi-source research.</p>
 
-def get_user_projects(user_id):
-    rows = _list_rows(APPWRITE_PROJECTS_TABLE_ID, [f'equal("user_id", {json.dumps(str(user_id))})','orderDesc("$createdAt")','limit(100)'])
-    return [{"id":row["$id"],"title":row.get("title","Untitled"),"language":row.get("language","html"),"date":row.get("$createdAt","")} for row in rows]
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl mx-auto pt-2 text-left">
+            <button onclick="fillPrompt('Generate a colorful futuristic visual of a cyber city at night')" class="p-3 bg-[var(--card)] hover:bg-white/10 border border-[var(--border)] rounded-2xl transition">
+              <span class="text-sm">🎨</span>
+              <p class="text-xs font-semibold text-white mt-1">AI Images</p>
+              <p class="text-[10px] text-slate-400">High-definition art</p>
+            </button>
+            <button onclick="fillPrompt('Build a playable 2D Snake game with score and smooth physics in the workspace')" class="p-3 bg-[var(--card)] hover:bg-white/10 border border-[var(--border)] rounded-2xl transition">
+              <span class="text-sm">🎮</span>
+              <p class="text-xs font-semibold text-white mt-1">2D/3D Games</p>
+              <p class="text-[10px] text-slate-400">Playable in browser</p>
+            </button>
+            <button onclick="fillPrompt('Write a clean responsive coffee shop landing page in HTML and CSS in the workspace')" class="p-3 bg-[var(--card)] hover:bg-white/10 border border-[var(--border)] rounded-2xl transition">
+              <span class="text-sm">💻</span>
+              <p class="text-xs font-semibold text-white mt-1">Websites</p>
+              <p class="text-[10px] text-slate-400">Build live web apps</p>
+            </button>
+            <button onclick="fillPrompt('Research the latest breakthroughs in quantum computing and summarize key facts')" class="p-3 bg-[var(--card)] hover:bg-white/10 border border-[var(--border)] rounded-2xl transition">
+              <span class="text-sm">🔍</span>
+              <p class="text-xs font-semibold text-white mt-1">Deep Research</p>
+              <p class="text-[10px] text-slate-400">Multi-source insights</p>
+            </button>
+          </div>
+        </div>
+      </div>
 
+      <!-- Floating Pill Composer -->
+      <div class="p-4 sm:p-6 bg-gradient-to-t from-black/40 via-transparent to-transparent max-w-4xl w-full mx-auto">
+        <div id="fileBadge" class="hidden mb-2 inline-flex items-center gap-2 px-3 py-1 bg-white/10 border border-[var(--border)] rounded-xl text-xs text-slate-300">
+          <i id="fileIcon" class="fa-solid fa-paperclip text-[var(--accent)]"></i>
+          <span id="fileName">file.txt</span>
+          <button onclick="removeFile()" class="ml-1 text-slate-400 hover:text-white">&times;</button>
+        </div>
 
-def _get_project_row(project_id, user_id):
-    try:
-        row = _request("GET", _rows_url(APPWRITE_PROJECTS_TABLE_ID, project_id))
-    except RuntimeError:
-        return None
-    return row if row.get("user_id") == str(user_id) else None
+        <form id="chatForm" class="relative flex items-center bg-[var(--card)] border border-[var(--border)] rounded-3xl shadow-2xl p-1.5 focus-within:border-[var(--accent)] transition-all">
+          <input type="file" id="fileInput" class="hidden" accept="image/*,.txt,.pdf,.py,.js,.html,.css,.csv,.json" onchange="handleFileSelect(this)">
+          
+          <button type="button" onclick="document.getElementById('fileInput').click()" class="w-10 h-10 rounded-2xl text-slate-400 hover:text-white hover:bg-white/5 flex items-center justify-center transition" title="Attach Image or Document">
+            <i class="fa-solid fa-paperclip text-sm"></i>
+          </button>
 
+          <input 
+            type="text" 
+            id="promptInput" 
+            placeholder="Ask DOJA AI anything..." 
+            class="flex-1 bg-transparent px-3 py-3 text-sm text-white placeholder-slate-400 focus:outline-none"
+            required
+          >
 
-def get_project(project_id, user_id):
-    row = _get_project_row(project_id, user_id)
-    if row is None:
-        return None
-    raw = row.get("messages", "")
-    try:
-        parsed = json.loads(raw) if isinstance(raw, str) else raw
-        if isinstance(parsed, list):
-            return parsed
-    except (ValueError, TypeError):
-        pass
-    messages = []
-    if row.get("prompt"):
-        messages.append({"role":"user","content":row["prompt"]})
-    if row.get("code_content"):
-        messages.append({"role":"assistant","content":row["code_content"]})
-    return messages
+          <button type="button" id="micBtn" onclick="toggleSpeech()" class="w-10 h-10 rounded-2xl text-slate-400 hover:text-white hover:bg-white/5 flex items-center justify-center transition" title="Voice Input">
+            <i class="fa-solid fa-microphone text-sm"></i>
+          </button>
 
+          <button type="submit" id="sendBtn" class="w-10 h-10 rounded-2xl bg-[var(--accent)] hover:opacity-95 text-white flex items-center justify-center transition shadow-lg shrink-0">
+            <i class="fa-solid fa-arrow-up text-sm"></i>
+          </button>
+        </form>
+        <p class="text-[10px] text-center text-slate-400 mt-2">DOJA AI can make mistakes. Verify critical facts and code.</p>
+      </div>
+    </main>
 
-def delete_project(project_id, user_id):
-    if _get_project_row(project_id, user_id) is not None:
-        _request("DELETE", _rows_url(APPWRITE_PROJECTS_TABLE_ID, project_id))
+    <!-- RIGHT WORKSPACE PANEL -->
+    <section id="previewPanel" class="w-[48%] border-l border-[var(--border)] flex flex-col bg-black/60 hidden">
+      <div class="h-14 px-4 border-b border-[var(--border)] flex items-center justify-between bg-black/30 backdrop-blur-md">
+        <div class="flex items-center gap-1.5">
+          <button id="tabPreview" onclick="switchRightTab('preview')" class="text-xs px-3 py-1.5 rounded-xl bg-[var(--accent)] text-white font-medium">🎮 Preview</button>
+          <button id="tabCode" onclick="switchRightTab('code')" class="text-xs px-3 py-1.5 rounded-xl text-slate-400 hover:text-white font-medium">💻 Code</button>
+        </div>
 
+        <div class="flex items-center gap-2">
+          <a href="/api/download-zip" class="text-xs bg-white/5 hover:bg-white/10 text-slate-200 px-3 py-1.5 rounded-xl border border-[var(--border)] transition flex items-center gap-1.5">
+            <i class="fa-solid fa-file-zipper text-[var(--accent)]"></i> Download .ZIP
+          </a>
+          <button onclick="reloadPreview()" class="text-xs bg-white/5 hover:bg-white/10 text-slate-300 px-2.5 py-1.5 rounded-xl border border-[var(--border)] transition">
+            <i class="fa-solid fa-rotate-right"></i>
+          </button>
+        </div>
+      </div>
 
-def get_user_instructions(user_id):
-    rows = _list_rows(APPWRITE_SETTINGS_TABLE_ID, [f'equal("user_id", {json.dumps(str(user_id))})','limit(2)'])
-    return rows[0].get("custom_instructions", "") if rows else ""
+      <div id="previewContainer" class="flex-1 p-2 bg-black/40">
+        <iframe id="previewFrame" src="/workspace/index.html" class="w-full h-full rounded-2xl bg-white border border-[var(--border)]"></iframe>
+      </div>
 
+      <div id="codeContainer" class="flex-1 p-4 bg-black/40 overflow-y-auto hidden">
+        <div class="flex items-center justify-between mb-3">
+          <select id="codeFileSelect" onchange="renderSelectedCode()" class="bg-white/5 border border-[var(--border)] text-xs text-white px-3 py-1.5 rounded-xl focus:outline-none"></select>
+          <button onclick="copyCurrentCode()" class="text-xs px-3 py-1.5 bg-[var(--accent)] text-white rounded-xl transition"><i class="fa-regular fa-copy mr-1"></i> Copy Code</button>
+        </div>
+        <pre><code id="codeViewerBlock" class="language-javascript text-xs"></code></pre>
+      </div>
+    </section>
+  </div>
 
-def save_user_instructions(user_id, instructions):
-    rows = _list_rows(APPWRITE_SETTINGS_TABLE_ID, [f'equal("user_id", {json.dumps(str(user_id))})','limit(2)'])
-    payload = {"data":{"user_id":str(user_id),"custom_instructions":str(instructions)[:50000]}}
-    if rows:
-        _request("PATCH", _rows_url(APPWRITE_SETTINGS_TABLE_ID, rows[0]["$id"]), json_body=payload)
-    else:
-        payload["rowId"] = "unique()"
-        _request("POST", _rows_url(APPWRITE_SETTINGS_TABLE_ID), json_body=payload)
+  <script>
+    let currentUser = JSON.parse(localStorage.getItem('doja_user'));
+    let authMode = 'login';
+    let selectedFile = null;
+    let conversationHistory = [];
+    let workspaceFiles = {};
+    let allUserProjects = [];
+    let isRecognizing = false;
+    let recognition = null;
+    let lastUserPrompt = "";
 
+    function initAuth() {
+      if (!currentUser) {
+        document.getElementById('authModal').classList.remove('hidden');
+      } else {
+        document.getElementById('authModal').classList.add('hidden');
+        document.getElementById('userNameDisplay').innerText = currentUser.username;
+        document.getElementById('userAvatar').innerText = currentUser.username[0].toUpperCase();
+        loadProjects();
+        loadSettings();
+      }
+    }
 
-def _workspace_dir(user_id):
-    root = Path("workspace").resolve()
-    directory = (root / str(user_id)).resolve()
-    if root not in directory.parents:
-        raise ValueError("Invalid workspace owner")
-    directory.mkdir(parents=True, exist_ok=True)
-    return directory
+    function switchAuthTab(mode) {
+      authMode = mode;
+      const tabLogin = document.getElementById('tabLogin');
+      const tabSignup = document.getElementById('tabSignup');
+      const emailField = document.getElementById('emailField');
+      const btn = document.getElementById('authSubmitBtn');
+      if (mode === 'login') {
+        tabLogin.className = "flex-1 pb-3 text-sm font-semibold text-[var(--accent)] border-b-2 border-[var(--accent)]";
+        tabSignup.className = "flex-1 pb-3 text-sm font-semibold text-slate-400";
+        emailField.classList.add('hidden');
+        btn.innerText = "Sign In";
+      } else {
+        tabSignup.className = "flex-1 pb-3 text-sm font-semibold text-[var(--accent)] border-b-2 border-[var(--accent)]";
+        tabLogin.className = "flex-1 pb-3 text-sm font-semibold text-slate-400";
+        emailField.classList.remove('hidden');
+        btn.innerText = "Create Account";
+      }
+    }
 
+    document.getElementById('authForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const u = document.getElementById('authUsername').value.trim();
+      const p = document.getElementById('authPassword').value.trim();
+      const email = document.getElementById('authEmail').value.trim();
+      const err = document.getElementById('authError');
+      err.classList.add('hidden');
+      const endpoint = authMode === 'login' ? '/api/login' : '/api/signup';
+      const payload = authMode === 'login' ? { username_or_email: u, password: p } : { username: u, email: email, password: p };
 
-def save_workspace_file(filename, content, user_id):
-    safe_name = Path(filename).name
-    if not safe_name or safe_name in {".",".."}:
-        raise ValueError("Invalid workspace filename")
-    stored_name = f"{user_id}__{safe_name}"
-    existing = _request("GET", _storage_url(), params=[("queries[]",f'search("name", {json.dumps(stored_name)})'),("limit","100")])
-    for old in existing.get("files", []):
-        if old.get("name") == stored_name:
-            _request("DELETE", _storage_url(old["$id"]))
-    response = requests.post(_storage_url(), headers={"X-Appwrite-Project":APPWRITE_PROJECT_ID,"X-Appwrite-Key":APPWRITE_API_KEY}, data={"fileId":"unique()"}, files={"file":(stored_name,content)}, timeout=60)
-    if not response.ok:
-        raise RuntimeError(f"Appwrite Storage upload failed (HTTP {response.status_code})")
-    local = _workspace_dir(user_id) / safe_name
-    local.write_bytes(content)
-    return response.json()
+      try {
+        let res = await fetch(endpoint, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+        let data = await res.json();
 
+        if (!data.success && authMode === 'login') {
+          const vault = JSON.parse(localStorage.getItem('doja_vault') || '{}');
+          if (vault.username && (vault.username.toLowerCase() === u.toLowerCase() || vault.email.toLowerCase() === u.toLowerCase()) && vault.password === p) {
+            const autoReg = await fetch('/api/signup', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({ username: vault.username, email: vault.email, password: vault.password })
+            });
+            const regData = await autoReg.json();
+            if (regData.success) { data = regData; }
+          }
+        }
 
-def list_workspace_files(user_id):
-    result = _request("GET", _storage_url(), params=[("limit","100")])
-    directory = _workspace_dir(user_id)
-    output = {}
-    prefix = f"{user_id}__"
-    for meta in result.get("files", []):
-        name = meta.get("name", "")
-        if not name.startswith(prefix):
-            continue
-        visible = name[len(prefix):]
-        if "/" in visible or "\\" in visible:
-            continue
-        try:
-            data = _request("GET", _storage_url(meta["$id"], view=True))
-            content = data if isinstance(data, bytes) else str(data).encode()
-            local = directory / visible
-            local.write_bytes(content)
-            output[visible] = local.read_text(encoding="utf-8", errors="replace")
-        except (RuntimeError, OSError):
-            continue
-    return output
+        if (data.success) {
+          currentUser = data;
+          localStorage.setItem('doja_user', JSON.stringify(data));
+          if (authMode === 'signup') {
+            localStorage.setItem('doja_vault', JSON.stringify({ username: u, email: email, password: p }));
+          }
+          initAuth();
+        } else {
+          err.innerText = data.error || 'Authentication failed';
+          err.classList.remove('hidden');
+        }
+      } catch (e) {
+        err.innerText = 'Server connection error';
+        err.classList.remove('hidden');
+      }
+    });
 
+    function logout() {
+      localStorage.removeItem('doja_user');
+      currentUser = null;
+      location.reload();
+    }
 
-init_db()
+    async function loadProjects() {
+      if (!currentUser) return;
+      const res = await fetch('/api/projects/' + currentUser.user_id);
+      const data = await res.json();
+      allUserProjects = data.projects || [];
+      renderProjectsList(allUserProjects);
+    }
+
+    function renderProjectsList(projects) {
+      const list = document.getElementById('projectList');
+      const badge = document.getElementById('projectCountBadge');
+      if (badge) badge.innerText = projects.length;
+      list.innerHTML = '';
+
+      if (projects.length > 0) {
+        projects.forEach(p => {
+          list.innerHTML += `
+            <div class="flex items-center justify-between p-2 hover:bg-white/5 rounded-xl group transition cursor-pointer">
+              <span onclick="loadSession(${p.id})" class="truncate text-slate-300 text-xs flex-1"><i class="fa-solid fa-cube text-[10px] text-[var(--accent)] mr-2"></i> ${p.title}</span>
+              <button onclick="event.stopPropagation(); deleteProject(${p.id})" class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-400 text-xs transition px-1"><i class="fa-regular fa-trash-can"></i></button>
+            </div>
+          `;
+        });
+      } else {
+        list.innerHTML = `<p class="text-slate-400 px-3 py-2">No projects found.</p>`;
+      }
+    }
+
+    function filterProjects(query) {
+      const q = query.toLowerCase().trim();
+      if (!q) {
+        renderProjectsList(allUserProjects);
+      } else {
+        const filtered = allUserProjects.filter(p => p.title.toLowerCase().includes(q));
+        renderProjectsList(filtered);
+      }
+    }
+
+    async function loadSession(projectId) {
+      const res = await fetch(`/api/projects/${projectId}/load?user_id=${currentUser.user_id}`);
+      const data = await res.json();
+      if (!data || !data.messages) return;
+
+      conversationHistory = data.messages;
+      const history = document.getElementById('chatHistory');
+      history.innerHTML = '';
+
+      conversationHistory.forEach(msg => {
+        if (msg.role === 'user') {
+          history.innerHTML += `
+            <div class="flex justify-end">
+              <div class="bg-[var(--accent)] text-white px-5 py-3 rounded-2xl text-sm max-w-xl shadow-lg">
+                ${msg.content}
+              </div>
+            </div>
+          `;
+        } else {
+          const formatted = marked.parse(msg.content);
+          history.innerHTML += `
+            <div class="flex gap-4">
+              <div class="w-8 h-8 rounded-xl bg-[var(--accent)] flex items-center justify-center font-bold text-white text-xs shrink-0 mt-1">D</div>
+              <div class="flex-1 max-w-3xl">
+                <div class="prose-doja text-slate-200 leading-relaxed text-sm">${formatted}</div>
+                <div class="mt-2 flex items-center gap-3 text-xs text-slate-400">
+                  <button onclick="speakText(\`${encodeURIComponent(msg.content)}\`)" class="hover:text-white transition flex items-center gap-1.5 py-1 px-2 rounded-lg hover:bg-white/5">
+                    <i class="fa-solid fa-volume-high text-[11px]"></i> Listen
+                  </button>
+                  <button onclick="navigator.clipboard.writeText(\`${encodeURIComponent(msg.content)}\`); alert('Copied!');" class="hover:text-white transition flex items-center gap-1.5 py-1 px-2 rounded-lg hover:bg-white/5">
+                    <i class="fa-regular fa-copy text-[11px]"></i> Copy
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+      });
+      history.scrollTop = history.scrollHeight;
+      reloadPreview();
+    }
+
+    async function deleteProject(id) {
+      if (!confirm('Delete this project?')) return;
+      await fetch(`/api/projects/${id}?user_id=${currentUser.user_id}`, { method: 'DELETE' });
+      loadProjects();
+    }
+
+    // Library Modal
+    async function openLibraryModal() {
+      document.getElementById('libraryModal').classList.remove('hidden');
+      const list = document.getElementById('libraryFileList');
+      list.innerHTML = '<p class="text-slate-500 py-3 text-center">Loading workspace files...</p>';
+      try {
+        const res = await fetch('/api/get-code');
+        const data = await res.json();
+        const files = data.files || {};
+        list.innerHTML = '';
+        if (Object.keys(files).length > 0) {
+          Object.keys(files).forEach(f => {
+            list.innerHTML += `
+              <div class="flex items-center justify-between p-2.5 bg-white/5 rounded-xl border border-[var(--border)]">
+                <span class="text-white font-medium flex items-center gap-2"><i class="fa-regular fa-file-code text-[var(--accent)]"></i> ${f}</span>
+                <span class="text-slate-400 text-[10px]">${(files[f].length / 1024).toFixed(1)} KB</span>
+              </div>
+            `;
+          });
+        } else {
+          list.innerHTML = '<p class="text-slate-500 py-3 text-center">No workspace files created yet.</p>';
+        }
+      } catch (e) {
+        list.innerHTML = '<p class="text-red-400 py-3 text-center">Error reading library files.</p>';
+      }
+    }
+    function closeLibraryModal() { document.getElementById('libraryModal').classList.add('hidden'); }
+
+    // Images Studio Modal
+    function openImagesModal() { document.getElementById('imagesModal').classList.remove('hidden'); }
+    function closeImagesModal() { document.getElementById('imagesModal').classList.add('hidden'); }
+    function triggerQuickImage(promptText) {
+      closeImagesModal();
+      fillPrompt(promptText);
+      document.getElementById('chatForm').dispatchEvent(new Event('submit'));
+    }
+
+    // Voice Input & Output
+    function toggleSpeech() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) return alert('Speech recognition not supported in this browser.');
+      const micBtn = document.getElementById('micBtn');
+
+      if (isRecognizing) { recognition.stop(); return; }
+      recognition = new SpeechRecognition();
+      recognition.onstart = () => { isRecognizing = true; micBtn.classList.add('text-red-400', 'animate-pulse'); };
+      recognition.onresult = (e) => { document.getElementById('promptInput').value = e.results[0][0].transcript; };
+      recognition.onend = () => { isRecognizing = false; micBtn.classList.remove('text-red-400', 'animate-pulse'); };
+      recognition.start();
+    }
+
+    function speakText(text) {
+      window.speechSynthesis.cancel();
+      const decoded = decodeURIComponent(text);
+      const clean = decoded.replace(/<[^>]*>?/gm, '').replace(/!\[.*?\]\(.*?\)/g, '');
+      const utterance = new SpeechSynthesisUtterance(clean);
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function editPrompt(text) {
+      const input = document.getElementById('promptInput');
+      input.value = decodeURIComponent(text);
+      input.focus();
+    }
+
+    function fillPrompt(text) {
+      document.getElementById('promptInput').value = text;
+      document.getElementById('promptInput').focus();
+    }
+
+    function regenerateLast() {
+      if (!lastUserPrompt) return alert('No previous prompt to regenerate.');
+      document.getElementById('promptInput').value = lastUserPrompt;
+      document.getElementById('chatForm').dispatchEvent(new Event('submit'));
+    }
+
+    function shareConversation() {
+      if (conversationHistory.length === 0) return alert('No conversation to share yet.');
+      let transcript = "=== DOJA AI CONVERSATION ===\n\n";
+      conversationHistory.forEach(m => {
+        transcript += `[${m.role.toUpperCase()}]:\n${m.content}\n\n`;
+      });
+      navigator.clipboard.writeText(transcript);
+      alert('Full conversation transcript copied to your clipboard!');
+    }
+
+    function switchRightTab(tab) {
+      const tabPreview = document.getElementById('tabPreview');
+      const tabCode = document.getElementById('tabCode');
+      const prevCont = document.getElementById('previewContainer');
+      const codeCont = document.getElementById('codeContainer');
+      if (tab === 'preview') {
+        tabPreview.className = "text-xs px-3 py-1.5 rounded-xl bg-[var(--accent)] text-white font-medium";
+        tabCode.className = "text-xs px-3 py-1.5 rounded-xl text-slate-400 hover:text-white font-medium";
+        prevCont.classList.remove('hidden');
+        codeCont.classList.add('hidden');
+      } else {
+        tabCode.className = "text-xs px-3 py-1.5 rounded-xl bg-[var(--accent)] text-white font-medium";
+        tabPreview.className = "text-xs px-3 py-1.5 rounded-xl text-slate-400 hover:text-white font-medium";
+        codeCont.classList.remove('hidden');
+        prevCont.classList.add('hidden');
+        fetchWorkspaceCode();
+      }
+    }
+
+    async function fetchWorkspaceCode() {
+      const res = await fetch('/api/get-code');
+      const data = await res.json();
+      workspaceFiles = data.files || {};
+      const select = document.getElementById('codeFileSelect');
+      select.innerHTML = '';
+      Object.keys(workspaceFiles).forEach(name => {
+        select.innerHTML += `<option value="${name}">${name}</option>`;
+      });
+      renderSelectedCode();
+    }
+
+    function renderSelectedCode() {
+      const select = document.getElementById('codeFileSelect');
+      const codeBlock = document.getElementById('codeViewerBlock');
+      const fileName = select.value;
+      codeBlock.innerText = workspaceFiles[fileName] || 'No code found.';
+      hljs.highlightElement(codeBlock);
+    }
+
+    function copyCurrentCode() {
+      const codeBlock = document.getElementById('codeViewerBlock');
+      navigator.clipboard.writeText(codeBlock.innerText);
+      alert('Code copied to clipboard!');
+    }
+
+    function changeTheme(theme) {
+      document.body.className = `theme-${theme} h-screen flex flex-col font-sans overflow-hidden transition-colors duration-500`;
+      localStorage.setItem('doja_theme', theme);
+    }
+    const savedTheme = localStorage.getItem('doja_theme') || 'neon';
+    changeTheme(savedTheme);
+
+    function togglePreview(forceOpen = false) {
+      const panel = document.getElementById('previewPanel');
+      if (forceOpen) {
+        panel.classList.remove('hidden');
+      } else {
+        panel.classList.toggle('hidden');
+      }
+    }
+
+    function reloadPreview() {
+      document.getElementById('previewFrame').src = '/workspace/index.html?t=' + new Date().getTime();
+    }
+
+    function newChat() {
+      conversationHistory = [];
+      lastUserPrompt = "";
+      document.getElementById('chatHistory').innerHTML = `
+        <div class="text-center py-12 space-y-6">
+          <h2 class="text-2xl font-bold text-white tracking-tight">What can I help you create?</h2>
+          <p class="text-xs text-slate-400 max-w-md mx-auto">Ask reasoning questions, build games, generate visual art, or use the 🎙️ mic to speak.</p>
+        </div>
+      `;
+    }
+
+    function openSettingsModal() { document.getElementById('settingsModal').classList.remove('hidden'); }
+    function closeSettingsModal() { document.getElementById('settingsModal').classList.add('hidden'); }
+    function switchSettingsTab(tab) {
+      const tabThemes = document.getElementById('setTabThemes');
+      const tabInst = document.getElementById('setTabInst');
+      const tabPass = document.getElementById('setTabPass');
+      const secThemes = document.getElementById('settingsThemesSection');
+      const secInst = document.getElementById('settingsInstSection');
+      const secPass = document.getElementById('settingsPassSection');
+
+      tabThemes.className = "flex-1 pb-3 text-xs font-bold text-slate-400 uppercase tracking-wider";
+      tabInst.className = "flex-1 pb-3 text-xs font-bold text-slate-400 uppercase tracking-wider";
+      tabPass.className = "flex-1 pb-3 text-xs font-bold text-slate-400 uppercase tracking-wider";
+      secThemes.classList.add('hidden');
+      secInst.classList.add('hidden');
+      secPass.classList.add('hidden');
+
+      if (tab === 'themes') {
+        tabThemes.className = "flex-1 pb-3 text-xs font-bold text-[var(--accent)] border-b-2 border-[var(--accent)] uppercase tracking-wider";
+        secThemes.classList.remove('hidden');
+      } else if (tab === 'inst') {
+        tabInst.className = "flex-1 pb-3 text-xs font-bold text-[var(--accent)] border-b-2 border-[var(--accent)] uppercase tracking-wider";
+        secInst.classList.remove('hidden');
+      } else {
+        tabPass.className = "flex-1 pb-3 text-xs font-bold text-[var(--accent)] border-b-2 border-[var(--accent)] uppercase tracking-wider";
+        secPass.classList.remove('hidden');
+      }
+    }
+
+    async function loadSettings() {
+      if (!currentUser) return;
+      const res = await fetch('/api/settings/' + currentUser.user_id);
+      const data = await res.json();
+      document.getElementById('customInstructionsInput').value = data.custom_instructions || '';
+    }
+
+    async function saveSettings() {
+      const val = document.getElementById('customInstructionsInput').value.trim();
+      await fetch('/api/settings', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ user_id: currentUser.user_id, custom_instructions: val })
+      });
+      closeSettingsModal();
+      alert('Custom instructions saved!');
+    }
+
+    async function submitChangePassword() {
+      const oldP = document.getElementById('oldPasswordInput').value.trim();
+      const newP = document.getElementById('newPasswordInput').value.trim();
+      const msg = document.getElementById('passChangeMsg');
+      try {
+        const res = await fetch('/api/change-password', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ user_id: currentUser.user_id, old_password: oldP, new_password: newP })
+        });
+        const data = await res.json();
+        if (data.success) {
+          msg.className = "text-xs text-emerald-400";
+          msg.innerText = data.message;
+          msg.classList.remove('hidden');
+          setTimeout(closeSettingsModal, 1500);
+        } else {
+          msg.className = "text-xs text-red-400";
+          msg.innerText = data.error;
+          msg.classList.remove('hidden');
+        }
+      } catch (e) {
+        msg.className = "text-xs text-red-400";
+        msg.innerText = "Error updating password.";
+        msg.classList.remove('hidden');
+      }
+    }
+
+    function handleFileSelect(input) {
+      if (input.files && input.files[0]) {
+        selectedFile = input.files[0];
+        document.getElementById('fileName').innerText = selectedFile.name;
+        const icon = document.getElementById('fileIcon');
+        if (selectedFile.type.startsWith('image/')) {
+          icon.className = "fa-solid fa-image text-emerald-400";
+        } else {
+          icon.className = "fa-solid fa-paperclip";
+        }
+        document.getElementById('fileBadge').classList.remove('hidden');
+      }
+    }
+
+    function removeFile() {
+      selectedFile = null;
+      document.getElementById('fileInput').value = '';
+      document.getElementById('fileBadge').classList.add('hidden');
+    }
+
+    // ==========================================================
+    // CHAT SUBMISSION (LIVE COUNTING TIMER + EXPANDABLE THOUGHT BOX)
+    // ==========================================================
+    document.getElementById('chatForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const input = document.getElementById('promptInput');
+      const prompt = input.value.trim();
+      if (!prompt && !selectedFile) return;
+
+      const welcome = document.getElementById('heroWelcome');
+      if (welcome) welcome.remove();
+
+      lastUserPrompt = prompt;
+      const history = document.getElementById('chatHistory');
+      const fileBadgeHtml = selectedFile ? `<div class="text-xs text-slate-300 mb-1"><i class="fa-solid fa-paperclip mr-1"></i> Attached: ${selectedFile.name}</div>` : '';
+
+      history.innerHTML += `
+        <div class="flex justify-end group">
+          <div class="bg-[var(--accent)] text-white px-5 py-3 rounded-2xl text-sm max-w-xl shadow-lg relative">
+            ${fileBadgeHtml}
+            ${prompt}
+            <button onclick="editPrompt(\`${encodeURIComponent(prompt)}\`)" class="opacity-0 group-hover:opacity-100 absolute -left-7 top-3 text-slate-400 hover:text-white text-xs transition" title="Edit Prompt">
+              <i class="fa-solid fa-pencil"></i>
+            </button>
+          </div>
+        </div>
+      `;
+      input.value = '';
+      history.scrollTop = history.scrollHeight;
+
+      // 1. START LIVE TIMER & LOADING STATE
+      const startTime = Date.now();
+      const loadingId = 'load-' + startTime;
+      const timerId = 'thinkTimer-' + startTime;
+
+      history.innerHTML += `
+        <div id="${loadingId}" class="flex gap-4">
+          <div class="w-8 h-8 rounded-xl bg-[var(--accent)] flex items-center justify-center font-bold text-white text-xs shrink-0 mt-1">D</div>
+          <div class="text-sm text-slate-300 py-1">
+            <span class="flex items-center gap-2">
+              <i class="fa-solid fa-circle-notch fa-spin text-xs text-[var(--accent)]"></i>
+              <span class="font-medium text-slate-200">Thinking...</span>
+              <span id="${timerId}" class="text-xs text-slate-400 font-mono">0s</span>
+            </span>
+          </div>
+        </div>
+      `;
+      history.scrollTop = history.scrollHeight;
+
+      // Real-time counting ticker
+      const countInterval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        const timerEl = document.getElementById(timerId);
+        if (timerEl) timerEl.innerText = `${elapsed}s`;
+      }, 1000);
+
+      try {
+        let res, data;
+        const userId = currentUser ? currentUser.user_id : 1;
+        const selectedModel = document.getElementById('modelSelect').value;
+
+        if (selectedFile) {
+          const formData = new FormData();
+          formData.append('file', selectedFile);
+          formData.append('prompt', prompt);
+          formData.append('user_id', userId);
+          formData.append('model', selectedModel);
+          res = await fetch('/api/upload', { method: 'POST', body: formData });
+          removeFile();
+        } else {
+          res = await fetch('/api/chat', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ prompt: prompt, user_id: userId, history: conversationHistory, model: selectedModel })
+          });
+        }
+        data = await res.json();
+        
+        clearInterval(countInterval);
+        document.getElementById(loadingId).remove();
+
+        const totalSeconds = Math.max(1, Math.floor((Date.now() - startTime) / 1000));
+        conversationHistory.push({ role: "user", content: prompt });
+        conversationHistory.push({ role: "assistant", content: data.response });
+
+        const respId = 'resp-' + Date.now();
+
+        // 2. RENDER THE EXPANDABLE "THOUGHT FOR X SECONDS" ACCORDION + FREE-FLOATING ANSWER
+        history.innerHTML += `
+          <div class="flex gap-4">
+            <div class="w-8 h-8 rounded-xl bg-[var(--accent)] flex items-center justify-center font-bold text-white text-xs shrink-0 mt-1">D</div>
+            <div class="flex-1 max-w-3xl">
+
+              <!-- Expandable Thinking Dropdown -->
+              <details class="mb-3 group rounded-xl bg-white/5 border border-[var(--border)] p-2.5 text-xs transition">
+                <summary class="cursor-pointer text-slate-400 font-medium flex items-center gap-2 select-none hover:text-white transition list-none">
+                  <i class="fa-solid fa-chevron-right text-[10px] text-slate-400 group-open:rotate-90 transition-transform"></i>
+                  <i class="fa-solid fa-brain text-[var(--accent)] text-xs"></i>
+                  <span>Thought for ${totalSeconds} second${totalSeconds === 1 ? '' : 's'}</span>
+                </summary>
+                <div class="mt-2.5 pt-2 border-t border-[var(--border)] text-slate-400 text-[11px] space-y-1 pl-4 leading-relaxed font-mono">
+                  <p>• Interpreted user prompt and context constraints</p>
+                  <p>• Processed multi-turn memory and tool requirements</p>
+                  <p>• Formulated reasoning structure and final output</p>
+                </div>
+              </details>
+
+              <!-- Final Answer (Clean Free-Floating Text) -->
+              <div id="${respId}" class="prose-doja text-slate-200 leading-relaxed text-sm"></div>
+
+              <!-- Clean Action Footer -->
+              <div class="mt-2 flex items-center gap-3 text-xs text-slate-400">
+                <button onclick="speakText(conversationHistory[conversationHistory.length-1].content)" class="hover:text-white transition flex items-center gap-1.5 py-1 px-2 rounded-lg hover:bg-white/5" title="Read Aloud">
+                  <i class="fa-solid fa-volume-high text-[11px]"></i> Listen
+                </button>
+                <button onclick="regenerateLast()" class="hover:text-white transition flex items-center gap-1.5 py-1 px-2 rounded-lg hover:bg-white/5" title="Regenerate Answer">
+                  <i class="fa-solid fa-arrows-rotate text-[11px]"></i> Retry
+                </button>
+                <button onclick="navigator.clipboard.writeText(conversationHistory[conversationHistory.length-1].content); alert('Copied!');" class="hover:text-white transition flex items-center gap-1.5 py-1 px-2 rounded-lg hover:bg-white/5">
+                  <i class="fa-regular fa-copy text-[11px]"></i> Copy
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+
+        const targetEl = document.getElementById(respId);
+        const fullHtml = marked.parse(data.response);
+        let idx = 0;
+        const interval = setInterval(() => {
+          idx += 6;
+          targetEl.innerHTML = fullHtml.slice(0, idx);
+          history.scrollTop = history.scrollHeight;
+          if (idx >= fullHtml.length) {
+            clearInterval(interval);
+            targetEl.innerHTML = fullHtml;
+            reloadPreview();
+            loadProjects();
+          }
+        }, 12);
+
+      } catch (err) {
+        clearInterval(countInterval);
+        document.getElementById(loadingId).remove();
+        history.innerHTML += `<div class="text-xs text-red-400 p-2">Error communicating with DOJA AI engine.</div>`;
+      } finally {
+        history.scrollTop = history.scrollHeight;
+      }
+    });
+
+    initAuth();
+  </script>
+</body>
+</html>
