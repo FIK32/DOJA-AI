@@ -1,301 +1,315 @@
-import io
+import json
+\
 import os
-import zipfile
-from pathlib import Path
-from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
-from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+\
+import random
+\
+import urllib.parse
+\
+from contextvars import ContextVar
+\
+import requests
+\
+from duckduckgo_search import DDGS
+\
+from openai import OpenAI
+\
 import database
-import doja_engine
+\
 
-app = FastAPI(title="DOJA AI Studio")
-os.makedirs("workspace", exist_ok=True)
-app.mount("/workspace", StaticFiles(directory="workspace", html=True), name="workspace")
-APPWRITE_RECOVERY_URL = os.getenv("APPWRITE_RECOVERY_URL", "").strip()
+\
+API_KEY = os.getenv("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")
+\
+if not API_KEY:
+\
+&#x20;   raise RuntimeError("GROQ_API_KEY is not configured in the environment.")
+\
+client = OpenAI(base_url="https\://api.groq.com/openai/v1", api_key=API_KEY)
+\
+CURRENT_USER_ID = ContextVar("doja_user_id", default=None)
+\
 
+\
+PLATFORM_DOMAINS = {"google":"google.com","wikipedia":"en.wikipedia.org","wikimedia":"commons.wikimedia.org","britannica":"britannica.com","scholar":"scholar.google.com","archive":"archive.org","github":"github.com","gitlab":"gitlab.com","stackoverflow":"stackoverflow\.com","mdn":"developer.mozilla.org","npm":"npmjs.com","pypi":"pypi.org","replit":"replit.com","coursera":"coursera.org","edx":"edx.org","khanacademy":"khanacademy.org","udemy":"udemy.com","youtube":"youtube.com","notion":"notion.so","slack":"slack.com","reddit":"reddit.com","linkedin":"linkedin.com","twitter":"x.com","telegram":"t.me","flickr":"flickr.com","unsplash":"unsplash.com"}
+\
 
-class SignupRequest(BaseModel):
-    username: str = Field(min_length=1, max_length=100)
-    email: str
-    password: str = Field(min_length=8, max_length=256)
+\
 
+\
+def search_internet(query):
+\
+&#x20;   with DDGS() as ddgs:
+\
+&#x20;       results = [f"Title: {r.get('title','')}\nSnippet: {r.get('body','')}\nSource: {r.get('href','')}" for r in ddgs.text(query, max_results=5)]
+\
+&#x20;   return "\n\n".join(results) if results else "No results found."
+\
 
-class LoginRequest(BaseModel):
-    username_or_email: str
-    password: str
+\
 
+\
+def platform_search(platform, query):
+\
+&#x20;   key = platform.lower().strip()
+\
+&#x20;   domain = PLATFORM_DOMAINS.get(key, f"{key}.com")
+\
+&#x20;   with DDGS() as ddgs:
+\
+&#x20;       results = [f"Platform: {platform.upper()}\nTitle: {r.get('title','')}\nSnippet: {r.get('body','')}\nLink: {r.get('href','')}" for r in ddgs.text(f"site:{domain} {query}", max_results=5)]
+\
+&#x20;   return "\n\n".join(results) if results else f"No direct results on {platform}."
+\
 
-class ForgotPasswordRequest(BaseModel):
-    email: str
+\
 
+\
+def live_github_lookup(repo_or_user):
+\
+&#x20;   try:
+\
+&#x20;       response = requests.get(f"https\://api.github.com/repos/{repo_or_user.strip()}", timeout=10, headers={"User-Agent":"DOJA-AI"})
+\
+&#x20;       if response.status_code == 200:
+\
+&#x20;           data = response.json()
+\
+&#x20;           return f"Repo: {data.get('full_name')}\nStars: {data.get('stargazers_count')}\nLanguage: {data.get('language')}\nURL: {data.get('html_url')}"
+\
+&#x20;   except requests.RequestException:
+\
+&#x20;       pass
+\
+&#x20;   return platform_search("github", repo_or_user)
+\
 
-class ResetPasswordRequest(BaseModel):
-    token: str = ""
-    user_id: str = ""
-    secret: str = ""
-    new_password: str = Field(min_length=8, max_length=256)
+\
 
+\
+def create_project_file(filename, content):
+\
+&#x20;   from pathlib import Path
+\
+&#x20;   user_id = CURRENT_USER_ID.get()
+\
+&#x20;   if not user_id:
+\
+&#x20;       return "Error: sign in before creating workspace files."
+\
+&#x20;   target = Path(filename)
+\
+&#x20;   if target.is_absolute() or ".." in target.parts:
+\
+&#x20;       return "Error: file path must stay inside the workspace."
+\
+&#x20;   database.save_workspace_file(target.name, content.encode("utf-8"), user_id)
+\
+&#x20;   return f"File '{target.name}' saved to your Appwrite workspace."
+\
 
-class ChangePasswordRequest(BaseModel):
-    user_id: str = ""
-    old_password: str
-    new_password: str = Field(min_length=8, max_length=256)
+\
 
+\
+def find_real_images(query, platform=""):
+\
+&#x20;   search_query = query.strip()
+\
+&#x20;   if platform:
+\
+&#x20;       domain = PLATFORM_DOMAINS.get(platform.lower().strip(), platform)
+\
+&#x20;       search_query = f"site:{domain} {search_query}"
+\
+&#x20;   try:
+\
+&#x20;       with DDGS() as ddgs:
+\
+&#x20;           results = []
+\
+&#x20;           for result in ddgs.images(search_query, max_results=3):
+\
+&#x20;               image_url = result.get("image") or result.get("thumbnail")
+\
+&#x20;               title = result.get("title", query)
+\
+&#x20;               source_page = result.get("url", "")
+\
+&#x20;               if image_url:
+\
+&#x20;                   results.append(f"![{title}]\({image_url})\n\*Photo source: [{title}]\({source_page})\*")
+\
+&#x20;   except Exception:
+\
+&#x20;       results = []
+\
+&#x20;   return "\n\n".join(results) if results else f"No live photos found for '{query}'."
+\
 
-class ChatRequest(BaseModel):
-    prompt: str
-    user_id: str = ""
-    history: list = Field(default_factory=list)
-    model: str = "openai/gpt-oss-120b"
+\
 
+\
+def generate_ai_image(prompt, style="photorealistic", aspect_ratio="16:9", count=1):
+\
+&#x20;   dimensions = {"16:9":(1280,720),"1:1":(1024,1024),"9:16":(720,1280),"4:3":(1024,768)}
+\
+&#x20;   width, height = dimensions.get(aspect_ratio.strip(), (1280,720))
+\
+&#x20;   modifiers = {"diagram":"scientific technical diagram, clear educational labels, professional clean infographic","blueprint":"architectural engineering blueprint, precise geometry, white technical lines on a blue grid","flowchart":"clean organizational flowchart, clear process nodes, modern vector infographic","photorealistic":"photorealistic, natural lighting, detailed textures, professional photography","cinematic":"cinematic film still, dramatic lighting, rich color grading","3d":"high-quality 3D render, detailed geometry, realistic lighting","anime":"anime aesthetic, vibrant colors, clean line art","logo":"minimalist professional vector logo, clean geometric design"}
+\
+&#x20;   full_prompt = f"{prompt.strip()}, {modifiers.get(style.lower().strip(), modifiers['photorealistic'])}"
+\
+&#x20;   images = []
+\
+&#x20;   for index in range(max(1, min(count, 3))):
+\
+&#x20;       seed = random.randint(1000,999999)
+\
+&#x20;       url = f"https\://image.pollinations.ai/prompt/{urllib.parse.quote(full_prompt)}?model=turbo&width={width}&height={height}&seed={seed}&nologo=true&enhance=true"
+\
+&#x20;       caption = f"{prompt[:30]} (Variation {index + 1})" if count > 1 else prompt[:40]
+\
+&#x20;       images.append(f"![{caption}]\({url})")
+\
+&#x20;   return "\n\n".join(images) + "\n\n"
+\
 
-class SettingsRequest(BaseModel):
-    user_id: str = ""
-    custom_instructions: str = ""
+\
 
+\
+available_tools = {"search_internet":search_internet,"platform_search":platform_search,"live_github_lookup":live_github_lookup,"find_real_images":find_real_images,"generate_ai_image":generate_ai_image,"create_project_file":create_project_file}
+\
 
-def set_session(response: JSONResponse, secret: str, request: Request):
-    response.set_cookie("doja_session", secret, httponly=True, secure=request.url.scheme == "https", samesite="lax", max_age=2592000, path="/")
+\
+tools_definition = [
+\
+{"type":"function","function":{"name":"search_internet","description":"Search the internet for current information.","parameters":{"type":"object","properties":{"query":{"type":"string"}},"required":["query"]}}},
+\
+{"type":"function","function":{"name":"platform_search","description":"Search a particular website or platform.","parameters":{"type":"object","properties":{"platform":{"type":"string"},"query":{"type":"string"}},"required":["platform","query"]}}},
+\
+{"type":"function","function":{"name":"live_github_lookup","description":"Look up a GitHub repository by owner/repository name.","parameters":{"type":"object","properties":{"repo_or_user":{"type":"string"}},"required":["repo_or_user"]}}},
+\
+{"type":"function","function":{"name":"find_real_images","description":"Find real-world photos from the internet.","parameters":{"type":"object","properties":{"query":{"type":"string"},"platform":{"type":"string"}},"required":["query"]}}},
+\
+{"type":"function","function":{"name":"generate_ai_image","description":"Generate an image URL for artwork or a diagram.","parameters":{"type":"object","properties":{"prompt":{"type":"string"},"style":{"type":"string","enum":["diagram","blueprint","flowchart","photorealistic","cinematic","3d","anime","logo"]},"aspect_ratio":{"type":"string","enum":["16:9","1:1","9:16","4:3"]},"count":{"type":"integer"}},"required":["prompt"]}}},
+\
+{"type":"function","function":{"name":"create_project_file","description":"Save a generated code or text file in the workspace.","parameters":{"type":"object","properties":{"filename":{"type":"string"},"content":{"type":"string"}},"required":["filename","content"]}}}
+\
+]
+\
 
+\
+SYSTEM_PROMPT = """You are DOJA AI, an assistant for research, coding, creative work, and development. Use web and platform search tools when useful. Use image search for real photos and image generation for artwork, diagrams, blueprints, and flowcharts. Use create_project_file when the user asks you to save a workspace file. Be clear and helpful, do not invent search results, explain uncertainty, and avoid horizontal-rule separators and Markdown pipe tables."""
+\
 
-def clear_session(response: JSONResponse):
-    response.delete_cookie("doja_session", path="/")
+\
 
-
-def current_user(request: Request):
-    user = database.get_account_from_session(request.cookies.get("doja_session", ""))
-    if not user:
-        raise HTTPException(status_code=401, detail="Please sign in again.")
-    return user
-
-
-def owned_user(request: Request, requested_id=""):
-    user = current_user(request)
-    if requested_id and str(requested_id) != user["$id"]:
-        raise HTTPException(status_code=403, detail="You do not own this resource.")
-    return user
-
-
-@app.get("/", response_class=HTMLResponse)
-def home():
-    path = Path("index.html")
-    if not path.is_file():
-        return "<h1>DOJA AI: index.html was not found</h1>"
-    html = path.read_text(encoding="utf-8")
-    bridge = r"""
-<script id="doja-appwrite-bridge">
-(function () {
-  localStorage.removeItem('doja_vault');
-
-  window.logout = async function () {
-    try { await fetch('/api/logout', { method:'POST', credentials:'same-origin' }); } catch (_) {}
-    localStorage.removeItem('doja_user');
-    localStorage.removeItem('doja_vault');
-    currentUser = null;
-    location.reload();
-  };
-
-  window.submitChangePassword = async function () {
-    if (!currentUser) return alert('Please sign in first.');
-    const oldPassword = document.getElementById('oldPasswordInput').value;
-    const newPassword = document.getElementById('newPasswordInput').value;
-    const message = document.getElementById('passChangeMsg');
-    try {
-      const response = await fetch('/api/change-password', {
-        method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({user_id:currentUser.user_id,old_password:oldPassword,new_password:newPassword})
-      });
-      const data = await response.json();
-      message.className = data.success ? 'text-xs text-emerald-400' : 'text-xs text-red-400';
-      message.innerText = data.message || data.error || 'Password update failed.';
-      message.classList.remove('hidden');
-      if (data.success) setTimeout(closeSettingsModal, 1200);
-    } catch (_) {
-      message.className = 'text-xs text-red-400';
-      message.innerText = 'Error updating password.';
-      message.classList.remove('hidden');
-    }
-  };
-
-  async function synchronizeSession() {
-    try {
-      const response = await fetch('/api/session', {credentials:'same-origin'});
-      if (!response.ok) throw new Error('signed out');
-      const data = await response.json();
-      currentUser = {success:true,user_id:data.user_id,username:data.username,email:data.email};
-      localStorage.setItem('doja_user', JSON.stringify(currentUser));
-      initAuth();
-    } catch (_) {
-      localStorage.removeItem('doja_user');
-      currentUser = null;
-      initAuth();
-    }
-  }
-
-  const params = new URLSearchParams(location.search);
-  if (params.has('userId') && params.has('secret')) {
-    setTimeout(async function () {
-      const newPassword = prompt('Enter a new password of at least 8 characters:');
-      if (!newPassword) return;
-      const response = await fetch('/api/reset-password', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({user_id:params.get('userId'),secret:params.get('secret'),new_password:newPassword})
-      });
-      const data = await response.json();
-      alert(data.message || data.error || 'Reset failed.');
-      if (data.success) history.replaceState({}, '', '/');
-    }, 300);
-  }
-  synchronizeSession();
-})();
-</script>
-"""
-    html = html.replace("</body>", bridge + "\n</body>", 1) if "</body>" in html else html + bridge
-    return HTMLResponse(html)
-
-
-@app.post("/api/signup")
-def signup(req: SignupRequest, request: Request):
-    result = database.create_user(req.username, req.email, req.password)
-    if not result["success"]:
-        return JSONResponse(status_code=400, content=result)
-    login = database.authenticate_user(req.email, req.password)
-    if not login["success"]:
-        return JSONResponse(status_code=201, content=result)
-    response = JSONResponse(content={k:v for k,v in login.items() if k != "session_secret"})
-    set_session(response, login["session_secret"], request)
-    return response
-
-
-@app.post("/api/login")
-def login(req: LoginRequest, request: Request):
-    result = database.authenticate_user(req.username_or_email, req.password)
-    if not result["success"]:
-        return JSONResponse(status_code=401, content=result)
-    response = JSONResponse(content={k:v for k,v in result.items() if k != "session_secret"})
-    set_session(response, result["session_secret"], request)
-    return response
-
-
-@app.get("/api/session")
-def session(request: Request):
-    user = current_user(request)
-    return {"success":True,"user_id":user["$id"],"username":user.get("name",""),"email":user.get("email","")}
-
-
-@app.post("/api/logout")
-def logout(request: Request):
-    database.delete_session(request.cookies.get("doja_session", ""))
-    response = JSONResponse({"success":True})
-    clear_session(response)
-    return response
-
-
-@app.post("/api/change-password")
-def change_password(req: ChangePasswordRequest, request: Request):
-    owned_user(request, req.user_id)
-    result = database.change_password(request.cookies.get("doja_session", ""), req.old_password, req.new_password)
-    if not result["success"]:
-        return JSONResponse(status_code=400, content=result)
-    return result
-
-
-@app.post("/api/forgot-password")
-def forgot_password(req: ForgotPasswordRequest):
-    if not APPWRITE_RECOVERY_URL:
-        return JSONResponse(status_code=500, content={"success":False,"error":"Password recovery is not configured."})
-    try:
-        database.create_password_reset_token(req.email, APPWRITE_RECOVERY_URL)
-    except RuntimeError:
-        pass
-    return {"success":True,"message":"If the account exists, Appwrite will send a recovery email."}
-
-
-@app.post("/api/reset-password")
-def reset_password(req: ResetPasswordRequest):
-    result = database.reset_password_with_token(req.token, req.new_password, req.user_id, req.secret)
-    if not result["success"]:
-        return JSONResponse(status_code=400, content=result)
-    return result
-
-
-@app.post("/api/chat")
-def chat(req: ChatRequest, request: Request):
-    user = owned_user(request, req.user_id)
-    try:
-        return {"status":"success","response":doja_engine.chat_with_doja(req.prompt,user["$id"],req.history,req.model)}
-    except Exception:
-        return JSONResponse(status_code=500, content={"status":"error","message":"DOJA could not complete the request."})
-
-
-@app.post("/api/upload")
-async def upload_file(request: Request, file: UploadFile = File(...), prompt: str = Form(""), user_id: str = Form(""), model: str = Form("openai/gpt-oss-120b")):
-    user = owned_user(request, user_id)
-    content = await file.read(8388609)
-    if len(content) > 8388608:
-        raise HTTPException(status_code=413, detail="File exceeds the 8 MB analysis limit.")
-    text = content.decode("utf-8", errors="ignore")[:6000] or "[Binary content]"
-    combined = f"File: {Path(file.filename or 'upload').name}\n\nContent:\n{text}\n\nRequest: {prompt or 'Analyze this file and summarize.'}"
-    try:
-        return {"status":"success","response":doja_engine.chat_with_doja(combined,user["$id"],[],model)}
-    except Exception:
-        return JSONResponse(status_code=500, content={"status":"error","message":"DOJA could not analyze that file."})
-
-
-@app.get("/api/download-zip")
-def download_workspace_zip(request: Request):
-    user = current_user(request)
-    files = database.list_workspace_files(user["$id"])
-    buffer = io.BytesIO()
-    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
-        for name, content in files.items():
-            archive.writestr(name, content)
-    buffer.seek(0)
-    return StreamingResponse(buffer, media_type="application/zip", headers={"Content-Disposition":"attachment; filename=doja_ai_project.zip"})
-
-
-@app.get("/api/get-code")
-def get_workspace_code(request: Request):
-    user = current_user(request)
-    return {"files":database.list_workspace_files(user["$id"])}
-
-
-@app.get("/api/projects/{user_id}")
-def projects(user_id: str, request: Request):
-    user = owned_user(request, user_id)
-    return {"projects":database.get_user_projects(user["$id"])}
-
-
-@app.get("/api/projects/{project_id}/load")
-def load_project(project_id: str, user_id: str, request: Request):
-    user = owned_user(request, user_id)
-    messages = database.get_project(project_id, user["$id"])
-    if messages is None:
-        return JSONResponse(status_code=404, content={"success":False,"error":"Project not found."})
-    return {"messages":messages}
-
-
-@app.delete("/api/projects/{project_id}")
-def delete_project(project_id: str, user_id: str, request: Request):
-    user = owned_user(request, user_id)
-    database.delete_project(project_id, user["$id"])
-    return {"success":True}
-
-
-@app.post("/api/settings")
-def save_settings(req: SettingsRequest, request: Request):
-    user = owned_user(request, req.user_id)
-    database.save_user_instructions(user["$id"], req.custom_instructions.strip())
-    return {"success":True}
-
-
-@app.get("/api/settings/{user_id}")
-def get_settings(user_id: str, request: Request):
-    user = owned_user(request, user_id)
-    return {"custom_instructions":database.get_user_instructions(user["$id"])}
-
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT","8000")))
+\
+def chat_with_doja(user_prompt, user_id, history=None, model_name="openai/gpt-oss-120b", image_b64=None):
+\
+&#x20;   token = CURRENT_USER_ID.set(str(user_id))
+\
+&#x20;   try:
+\
+&#x20;       custom_instructions = database.get_user_instructions(user_id)
+\
+&#x20;       system_text = SYSTEM_PROMPT
+\
+&#x20;       if custom_instructions:
+\
+&#x20;           system_text += f"\n\nUSER CUSTOM INSTRUCTIONS:\n{custom_instructions}"
+\
+&#x20;       messages = [{"role":"system","content":system_text}]
+\
+&#x20;       if isinstance(history, list):
+\
+&#x20;           for message in history[-6:]\:
+\
+&#x20;               role = message.get("role","user")
+\
+&#x20;               content = message.get("content","")
+\
+&#x20;               if role in {"user","assistant"}:
+\
+&#x20;                   messages.append({"role":role,"content":content})
+\
+&#x20;       if image_b64:
+\
+&#x20;           model_name = "llama-3.2-11b-vision-preview"
+\
+&#x20;           messages.append({"role":"user","content":[{"type":"text","text":user_prompt or "Analyze this image in detail."},{"type":"image_url","image_url":{"url":f"data:image/jpeg;base64,{image_b64}"}}]})
+\
+&#x20;       else:
+\
+&#x20;           messages.append({"role":"user","content":user_prompt})
+\
+&#x20;       visual_attachments = []
+\
+&#x20;       for \_ in range(8):
+\
+&#x20;           options = {"model":model_name or "openai/gpt-oss-120b","messages":messages}
+\
+&#x20;           if not image_b64:
+\
+&#x20;               options.update(tools=tools_definition, tool_choice="auto")
+\
+&#x20;           response = client.chat.completions.create(\*\*options)
+\
+&#x20;           assistant_message = response.choices[0].message
+\
+&#x20;           tool_calls = assistant_message.tool_calls or []
+\
+&#x20;           if not tool_calls:
+\
+&#x20;               answer = assistant_message.content or "Completed."
+\
+&#x20;               break
+\
+&#x20;           messages.append(assistant_message.model_dump(exclude_none=True))
+\
+&#x20;           for call in tool_calls:
+\
+&#x20;               name = call.function.name
+\
+&#x20;               try:
+\
+&#x20;                   args = json.loads(call.function.arguments or "{}")
+\
+&#x20;                   result = available_tools[name]\(\*\*args) if name in available_tools else f"Unknown tool: {name}"
+\
+&#x20;               except Exception as error:
+\
+&#x20;                   print(f"Tool {name} failed: {error}")
+\
+&#x20;                   result = "Tool failed. Please try again."
+\
+&#x20;               if name in {"generate_ai_image","find_real_images"}:
+\
+&#x20;                   visual_attachments.append(str(result))
+\
+&#x20;               messages.append({"tool_call_id":call.id,"role":"tool","name":name,"content":str(result)})
+\
+&#x20;       else:
+\
+&#x20;           answer = "Tool call limit reached. Please try a simpler request."
+\
+&#x20;       if visual_attachments:
+\
+&#x20;           answer = "\n\n".join(visual_attachments) + "\n\n" + answer
+\
+&#x20;       saved_history = (history or []) + [{"role":"user","content":user_prompt},{"role":"assistant","content":answer}]
+\
+&#x20;       title = user_prompt[:35] + ("..." if len(user_prompt) > 35 else "")
+\
+&#x20;       try:
+\
+&#x20;           database.save_project(user_id, title, user_prompt, answer, messages=saved_history)
+\
+&#x20;       except Exception as error:
+\
+&#x20;           print(f"Appwrite project save failed: {error}")
+\
+&#x20;       return answer
+\
+&#x20;   finally:
+\
+&#x20;       CURRENT_USER_ID.reset(token)
