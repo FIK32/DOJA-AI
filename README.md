@@ -1,102 +1,100 @@
-# DOJA AI Studio — Appwrite database edition
+# DOJA AI Studio — restored full project
 
-This project uses **Appwrite for all database records**. It does not use SQLite.
-FastAPI is the web/API server, and Groq provides chat responses.
-
-## Included
-- Appwrite-backed account records, sessions, chat conversations, chat messages, projects and settings
-- Groq chat endpoint, conversation context and selectable model
-- DuckDuckGo search for prompts that explicitly request current/web information
-- Upload and text extraction for PDF, TXT, Markdown, Python, JavaScript, HTML, CSS, JSON, CSV and XML
-- Simple responsive chat UI
-
-## 1. Create/prepare Appwrite
-In Appwrite Console, use your existing project and create (or use) one database. Create these collections with the collection IDs matching the names below (or change them in `.env`):
+This project retains the DOJA AI Studio layout and includes chat, account registration/login, Appwrite-backed conversations/messages, coding workspace, projects, image-studio URL integration, web search, file analysis, browser speech recognition, and settings/theme preferences.
 
 
-### `users`
-Attributes:
-- `username` String, 32, required
-- `email` String, 255, required
-- `password_hash` String, 255, required
-- `created_at` String, 50, required
-Indexes: unique index on `email`; unique index on `username`
-
-### `sessions`
-Attributes:
-- `user_id` String, 36, required
-- `token_hash` String, 64, required
-- `expires_at` Integer, required
-- `created_at` String, 50, required
-Indexes: unique index on `token_hash`; index on `user_id`
-
-### `conversations`
-Attributes:
-- `user_id` String, 36, required
-- `title` String, 100, required
-- `created_at` String, 50, required
-- `updated_at` String, 50, required
-Indexes: index on `user_id`
-
-### `messages`
-Attributes:
-- `user_id` String, 36, required
-- `conversation_id` String, 36, required
-- `role` String, 20, required
-- `content` String, 10000, required
-- `created_at` String, 50, required
-Indexes: index on `user_id`; index on `conversation_id`
-
-### `projects`
-Attributes:
-- `user_id` String, 36, required
-- `title` String, 100, required
-- `content` String, 10000, required
-- `created_at` String, 50, required
-- `updated_at` String, 50, required
-Indexes: index on `user_id`
-
-### `settings`
-Attributes:
-- `user_id` String, 36, required
-- `model` String, 120, required
-- `theme` String, 20, required
-- `updated_at` String, 50, required
-Indexes: unique index on `user_id`
+## Important notes
+- `database.py` uses Appwrite only; no SQLite database is used.
+- The chat model is accessed through the Groq API. Configure `GROQ_API_KEY` on the server. The key must never be placed in frontend JavaScript.
+- Image Studio currently creates a third-party Pollinations image URL. This is a URL-based integration, not a guaranteed image-generation backend; service availability, moderation, and privacy are controlled by the third party.
+- The coding workspace's HTML preview and CSS sample preview run in a sandboxed iframe. JavaScript preview is also sandboxed. Python is not executed in the browser.
+- Voice recognition uses browser SpeechRecognition/Web Speech API where available. Support and permissions vary by browser. This build does not provide a speech-to-speech model or guaranteed audio playback.
+- Search results come from DuckDuckGo's search library and may be temporarily unavailable or limited.
+- Appwrite custom account/session storage is implemented here. It is not Appwrite Auth. Protect the Appwrite API key and set collection permissions so only server access with the key is permitted.
+- The backend currently reads at most 100 documents per collection and filters by user ID in Python. For a large app, implement pagination and indexed server-side queries.
 
 
-Use a server API key with the database read/write permissions needed for these collections. Keep that API key private and only in the server `.env` file. The API key is never sent to the browser.
+## Local setup
+1. Install Python 3.11 or later.
+2. Unzip the project and open the folder in VS Code.
+3. Create a virtual environment: `python -m venv .venv`
+4. Activate it (Windows PowerShell): `.venv\\Scripts\\Activate.ps1`
+5. Install packages: `pip install -r requirements.txt`
+6. Copy `.env.example` to `.env` and fill in the Appwrite/Groq values.
+7. Run: `uvicorn main:app --reload`
+8. Open `http://127.0.0.1:8000`
 
 
-## 2. Set environment variables
-Copy `.env.example` to `.env` and fill the values from Appwrite Console and your Groq API-key page:
-
-- `APPWRITE_ENDPOINT` (your Appwrite endpoint)
-- `APPWRITE_PROJECT_ID`
-- `APPWRITE_API_KEY` (server key, never commit it)
-- `APPWRITE_DATABASE_ID`
-- `GROQ_API_KEY`
-- `SESSION_SECRET` (long random string)
-
-You may adjust collection ID environment values if your existing Appwrite IDs differ.
+## Appwrite database configuration
+Create a database and six collections matching the names configured in `.env` (defaults below). Server-side API key must have database/collection document permissions for these collections. Avoid enabling public write access.
 
 
-## 3. Install and run (Windows)
-Open the project folder in VS Code, then run in terminal:
+### Collections and attributes
+All attributes should be created with the indicated types and generous limits. Required fields marked `Required` should be required; others can be optional.
 
-```powershell
-py -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-copy .env.example .env
-```
-Edit `.env`, then start:
 
-```powershell
-uvicorn main:app --reload
-```
-Open http://127.0.0.1:8000
+**users**
+- `username` — string, 32, Required
+- `email` — string, 254, Required
+- `password_hash` — string, 255, Required
+- `created_at` — string, 40, Required
+- Indexes: unique `email`; unique `username`
 
-## Notes before public deployment
-This is a development starter, not production-ready. Before deploying publicly, implement secure production cookie settings (`secure=True` behind HTTPS), CSRF protection, rate limiting, email verification, account recovery, moderation, usage limits, Appwrite Storage for uploaded files, and review permissions. Appwrite collections should not be public; this backend uses server credentials. Add `.env` to `.gitignore`.
+**sessions**
+- `user_id` — string, 36, Required
+- `token_hash` — string, 64, Required
+- `expires_at` — string, 40, Required
+- `created_at` — string, 40, Required
+- Index: unique `token_hash`; index `user_id`
 
+**conversations**
+- `user_id` — string, 36, Required
+- `title` — string, 120, Required
+- `created_at` — string, 40, Required
+- `updated_at` — string, 40, Required
+- Index: `user_id`
+
+**messages**
+- `user_id` — string, 36, Required
+- `conversation_id` — string, 36, Required
+- `role` — string, 20, Required
+- `content` — string, 45000, Required
+- `created_at` — string, 40, Required
+- Indexes: `user_id`; `conversation_id`
+
+**projects**
+- `user_id` — string, 36, Required
+- `title` — string, 120, Required
+- `content` — string, 50000, Required
+- `created_at` — string, 40, Required
+- `updated_at` — string, 40, Required
+- Index: `user_id`
+
+**settings**
+- `user_id` — string, 36, Required
+- `theme` — string, 30, Required
+- `model` — string, 120, Required
+- `created_at` — string, 40, Required
+- `updated_at` — string, 40, Required
+- Index: unique `user_id`
+
+Note: Appwrite may limit string attribute sizes depending on plan/database configuration. If a 45,000 or 50,000 character string attribute cannot be created, use a lower maximum and adjust file/project truncation limits in `main.py` to match.
+
+
+## Render deployment
+- Use Python runtime.
+- Build command: `pip install -r requirements.txt`
+- Start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+- Add the Appwrite and Groq variables from `.env.example` to Render's Environment settings.
+- Set `COOKIE_SECURE=true` for HTTPS.
+- Do not upload or commit `.env`.
+
+
+## API routes
+- `POST /api/register`, `POST /api/login`, `POST /api/logout`, `GET /api/me`
+- `GET /api/conversations`, `GET /api/conversations/{id}/messages`, `POST /api/chat`
+- `POST /api/upload`
+- `GET /api/projects`, `POST /api/projects`, `DELETE /api/projects/{id}`
+- `GET /api/settings`, `POST /api/settings`
+- `POST /api/search`, `POST /api/images`, `POST /api/code-assistant`
+- `GET /health`
