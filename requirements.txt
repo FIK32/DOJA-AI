@@ -1,1 +1,6 @@
-
+fastapi
+uvicorn[standard]
+httpx
+python-multipart
+groq
+beautifulsoup4
